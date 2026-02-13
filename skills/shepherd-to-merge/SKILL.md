@@ -13,6 +13,10 @@ protection rules or security constraints.
 **Important:** Never use admin privileges to bypass branch protections, force-merge, or dismiss
 reviews. The goal is to satisfy all merge requirements legitimately.
 
+**Multi-agent safety:** Multiple agents may be shepherding different PRs in parallel. Expect the
+base branch to move frequently as other agents merge. The rebase retry loop in step 8 handles this.
+Each agent works on its own PR branch and does not modify branches belonging to other sessions.
+
 ## Input
 
 `$ARGUMENTS` should be one of:
@@ -152,10 +156,11 @@ PR, note it in a comment but do not bypass it.
 
 ### 8. Rebase on base branch (with retry loop)
 
-Concurrent merges from other sessions move the base branch forward frequently. This step may need to
-run multiple times — up to 3 attempts.
+Concurrent merges from other agents move the base branch forward frequently. This step may need to
+run multiple times — up to 5 attempts. With many parallel agents, the base branch can move several
+times while CI is running.
 
-**For each attempt (max 3):**
+**For each attempt (max 5):**
 
 1. Check merge state:
    ```sh
@@ -181,8 +186,8 @@ run multiple times — up to 3 attempts.
    e. Wait for CI to re-run and pass before the next iteration.
    f. After CI passes, re-check `mergeStateStatus`. If still not `CLEAN`, loop again.
 
-4. If all 3 attempts fail to reach `CLEAN`, inform the user — something else is likely merging
-   continuously and manual coordination is needed.
+4. If all 5 attempts fail to reach `CLEAN`, inform the user — multiple agents are likely merging
+   concurrently and manual coordination may be needed.
 
 ### 9. Enable auto-merge
 

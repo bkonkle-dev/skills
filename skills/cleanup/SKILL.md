@@ -9,6 +9,10 @@ disable-model-invocation: true
 Clean up the current repository after finishing a task. Prunes stale branches, checks for
 uncommitted or unpushed work, and checks for unfinalized session memories.
 
+**Multi-agent safety:** Multiple agents may be running in parallel via worktrees. This skill only
+cleans up resources belonging to the **current session** and never touches branches or worktrees
+owned by other active sessions.
+
 ## Prerequisites
 
 - You must be inside a git repository.
@@ -18,6 +22,15 @@ uncommitted or unpushed work, and checks for unfinalized session memories.
 1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/`, use
    `<name>`. Otherwise, use `$(basename "$PWD")`.
 2. **Repo root:** Run `git rev-parse --show-toplevel`.
+3. **Current branch:** Run `git branch --show-current`.
+4. **Active worktree branches:** List all branches checked out in any worktree. These are
+   **off-limits** for deletion:
+
+   ```sh
+   git worktree list --porcelain | awk '/^branch / {sub("refs/heads/", "", $2); print $2}'
+   ```
+
+   Store this list for use during branch pruning.
 
 ## Steps
 
@@ -57,21 +70,16 @@ before continuing. Do not silently skip warnings.
      | grep -v "^${default}$"
    ```
 
-4. **Triage and delete stale branches:** Combine the two lists (dedup). If the current branch is
-   one of the candidates, try to switch to the default branch first:
+4. **Triage and delete stale branches:** Combine the two lists (dedup). For each candidate branch,
+   run the following checks before deleting. Track skipped branches and their reasons for the
+   summary.
 
-   ```sh
-   git switch <default>
-   ```
+   **a. Skip worktree-checked-out branches** — if the branch appears in the active worktree
+   branches list (from "Detecting Context" step 4), **skip** it (reason: "checked out in a
+   worktree"). This protects branches used by other parallel agents. Never attempt to delete a
+   branch that is checked out in any worktree.
 
-   If `git switch` fails because the default branch is checked out in another worktree, **skip**
-   the current branch (reason: "current branch in worktree — delete after worktree is removed")
-   and continue with the remaining candidates.
-
-   For each candidate branch, run the following checks before deleting. Track skipped branches and
-   their reasons for the summary.
-
-   **a. Check for open PRs** — query GitHub to see if the branch has an open pull request:
+   **b. Check for open PRs** — query GitHub to see if the branch has an open pull request:
 
    ```sh
    repo_slug=$(git remote get-url origin | sed -E 's|.*github\.com[:/]||; s|\.git$||')
@@ -80,7 +88,7 @@ before continuing. Do not silently skip warnings.
 
    If `open_prs > 0`, **skip** the branch (reason: "has open PR").
 
-   **b. Delete if safe** — only if the check above passes:
+   **c. Delete if safe** — only if all checks above pass:
 
    - For **gone-upstream branches** (from step 2.2), use `-D` since the remote already deleted the
      tracking branch:
@@ -98,6 +106,17 @@ before continuing. Do not silently skip warnings.
 
    Report each deleted branch. If no stale branches are found, note that the repo is clean.
 
+5. **Handle the current session's branch:** If the current branch is a candidate for deletion
+   (merged or gone-upstream) and you need to switch away from it:
+
+   ```sh
+   git switch <default>
+   ```
+
+   If `git switch` fails because the default branch is checked out in another worktree, **skip**
+   the current branch (reason: "default branch checked out in another worktree — delete after
+   worktree is removed") and continue with the remaining candidates.
+
 ### 3. Finalize session memory (if applicable)
 
 Check whether a session memory directory exists for the current session and today's date:
@@ -114,9 +133,11 @@ If a session directory exists and has not been finalized (contains HTML comment 
 Display:
 
 - **Session:** name (from worktree or directory)
+- **Active worktrees:** count of other active worktrees detected (so the user knows parallel agents
+  exist)
 - **Stale branches deleted** — list each, or "none" if all clean
-- **Branches skipped** — list each with its reason ("has open PR"). Omit this bullet entirely if
-  nothing was skipped.
+- **Branches skipped** — list each with its reason ("checked out in a worktree", "has open PR").
+  Omit this bullet entirely if nothing was skipped.
 - **Warnings** — any uncommitted changes, unpushed commits, or unfinalized session memories (this
   section only appears if there are warnings)
 - **Status** — "ready for next task"

@@ -10,6 +10,10 @@ Find an unassigned, open issue in a repository, claim it, implement the fix or f
 shepherd it to merge, and confirm the issue is closed. This skill orchestrates the full lifecycle
 from issue selection through cleanup.
 
+**Multi-agent safety:** Multiple agents may run this skill in parallel across different worktrees.
+Each agent works on its own issue and branch. The cleanup step at the end is session-scoped and will
+not interfere with branches or worktrees used by other agents.
+
 ## Input
 
 `$ARGUMENTS` should contain:
@@ -57,8 +61,10 @@ If an issue filter was provided, narrow the results:
 
 From the results, exclude issues that:
 
-- Are already assigned (verify the `assignees` array is empty).
+- Are already assigned (verify the `assignees` array is empty) — another agent may have just
+  claimed an issue, so always re-check assignment before claiming.
 - Have a `wontfix`, `duplicate`, or `invalid` label.
+- Have a `status:in-progress` label (likely being worked on by another agent).
 - Are pull request references (some repos track PRs as issues).
 
 Present the top 5 candidates to the user and ask which one to work on. Include the issue number,
@@ -71,6 +77,17 @@ say "any" or "you pick", choose the highest-priority candidate using this heuris
 4. Older issues (lower number) sort before newer ones.
 
 ### 2. Claim the issue
+
+**Race-condition guard:** Before claiming, re-fetch the issue to confirm it is still unassigned.
+Another agent running in parallel may have claimed it between step 1 and now:
+
+```sh
+gh issue view <number> -R <owner>/<repo> --json assignees --jq '.assignees | length'
+```
+
+If the count is > 0, **skip this issue** and try the next candidate from the list gathered in
+step 1. If all candidates have been claimed, re-run the search query from step 1. If the re-query
+also returns no unassigned issues, inform the user that no unclaimed issues are available.
 
 Assign yourself to the issue and add an "in progress" signal:
 
