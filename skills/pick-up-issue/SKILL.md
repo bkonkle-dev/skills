@@ -52,34 +52,33 @@ perform these checks before proceeding:
 
 1. **Detect worktree name:** Extract `<name>` from the path.
 
-2. **Check for active sessions:** Look for JSONL transcript files modified in the last 5 minutes for
-   this worktree. Note: the current session's own transcript **will** match this check — that is
-   expected. This check is meaningful at the very start of the skill, before the session has written
-   significant transcript data. If a recent transcript exists, it belongs to a **prior or concurrent**
-   session:
+2. **Check for active sessions:** Count JSONL transcript files modified in the last 5 minutes for
+   this worktree. The current session will have its own transcript, so only flag a conflict when
+   **2 or more** recent transcripts exist (indicating another session is also active):
 
    ```sh
-   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
    if [ -n "$worktree_name" ]; then
      project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
      if [ -n "$project_dir" ]; then
-       active=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | head -1)
+       active_count=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | wc -l | tr -d ' ')
      fi
    fi
    ```
 
-   If `active` is non-empty, **STOP with error**: "Worktree `<name>` has an active session
-   (transcript modified within 5 minutes). Refusing to dispatch — wait for the session to finish
-   or use a different worktree."
+   If `active_count` is 2 or more, **STOP with error**: "Worktree `<name>` has an active session
+   (multiple transcripts modified within 5 minutes). Refusing to dispatch — wait for the session
+   to finish or use a different worktree."
 
-3. **Record designated branch:** The cleanup skill will independently return to `claude/<name>` in
+3. **Record current branch:** The cleanup skill will independently return to `claude/<name>` in
    a worktree context. Verify the current branch matches this convention:
 
    ```sh
-   designated_branch=$(git branch --show-current)
+   current_branch=$(git branch --show-current)
+   expected_branch="claude/${worktree_name}"
    ```
 
-   If the worktree is not on its expected `claude/<name>` branch, warn but proceed.
+   If `current_branch` does not match `expected_branch`, warn but proceed.
 
 ### 1. Find a candidate issue
 
@@ -177,10 +176,10 @@ source of wasted work.
 
 Fetch latest and create a feature branch. Use the human's GitHub username as the branch prefix.
 
-**In a worktree, NEVER run `git switch main` or `git checkout main`.** The default branch may be
-checked out in another worktree, and switching to it would fail with
-`fatal: 'main' is already used by worktree at ...`. Instead, always create the feature branch
-directly from `origin/<default>`:
+**In a worktree, NEVER switch to the default branch (e.g., `main` or `master`) using `git switch`
+or `git checkout`.** The default branch may be checked out in another worktree, and switching to it
+would fail with `fatal: 'main' is already used by worktree at ...`. Instead, always create the
+feature branch directly from `origin/<default>`:
 
 ```sh
 USERNAME=$(gh api user --jq .login)
@@ -315,7 +314,8 @@ If no status label was added, skip this step.
 ### 12. Clean up
 
 Run the cleanup skill to prune branches and check for loose work. If running in a worktree,
-`/cleanup` will return to `claude/<worktree-name>` instead of `main`.
+`/cleanup` will attempt to return to `claude/<worktree-name>` instead of the default branch. If
+that branch does not exist or switching fails, it will skip changing branches.
 
 ```
 /cleanup
