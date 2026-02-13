@@ -23,6 +23,7 @@ To install a single skill:
 
 | Skill | Description |
 |-------|-------------|
+| `aws-cost-check` | Comprehensive AWS account cost audit — discovers resources, flags runaway costs and free tier limits |
 | `cleanup` | Clean up the current repo — prune branches, check for uncommitted work |
 | `pick-up-issue` | Pick up an unassigned issue, implement it, shepherd the PR to merge |
 | `preflight` | Validate repo, branch, and environment before starting work |
