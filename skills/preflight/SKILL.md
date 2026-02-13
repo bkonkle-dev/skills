@@ -15,7 +15,7 @@ when starting ad-hoc work outside the standard skill pipeline.
 
 ## Input
 
-`$ARGUMENTS` should be the expected `owner/repo` (e.g., `bkonkle-dev/apps`). If omitted, the check
+`$ARGUMENTS` should be the expected `owner/repo` (e.g., `my-org/my-app`). If omitted, the check
 will still run but skip the repo identity validation.
 
 ## Prerequisites

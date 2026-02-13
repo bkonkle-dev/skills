@@ -9,9 +9,6 @@ MODEL=$(echo "$input" | jq -r '.model.display_name // empty')
 # Extract session name from worktree path or fall back to basename
 if [[ "$DIR" =~ \.claude/worktrees/([^/]+) ]]; then
   NAME="${BASH_REMATCH[1]}"
-elif [[ "$DIR" =~ /agents/([^/]+) ]]; then
-  # Backward compat for ~/agents/<name>/... workspaces
-  NAME="${BASH_REMATCH[1]}"
 else
   NAME="$(basename "$DIR")"
 fi

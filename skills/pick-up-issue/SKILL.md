@@ -14,15 +14,15 @@ from issue selection through cleanup.
 
 `$ARGUMENTS` should contain:
 
-- **Required:** A repo reference in `owner/repo` format (e.g., `bkonkle-dev/apps`).
+- **Required:** A repo reference in `owner/repo` format (e.g., `my-org/my-app`).
 - **Optional:** An issue filter — a label name, milestone, or search term to narrow which issues to
   consider. If omitted, all open issues are candidates.
 
 Examples:
 
-- `/pick-up-issue bkonkle-dev/apps` — pick any open, unassigned issue
-- `/pick-up-issue bkonkle-dev/apps bug` — prefer issues labeled `bug`
-- `/pick-up-issue bkonkle-dev/apps "good first issue"` — prefer issues labeled `good first issue`
+- `/pick-up-issue my-org/my-app` — pick any open, unassigned issue
+- `/pick-up-issue my-org/my-app bug` — prefer issues labeled `bug`
+- `/pick-up-issue my-org/my-app "good first issue"` — prefer issues labeled `good first issue`
 
 If `$ARGUMENTS` is empty, attempt to derive `owner/repo` from the current git remote. If not in a
 git repo, ask the user which repo to target.
