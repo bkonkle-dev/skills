@@ -17,12 +17,12 @@ architecture. It inspects whatever is running in the account.
 
 `<args>` may contain:
 
-- **Optional:** An AWS profile name (default: `chat-intent-write`).
-- **Optional:** A time window like `1h`, `6h`, `24h`, `7d`, `mtd` (default: `mtd` = month-to-date).
+- **Optional:** An AWS profile name (default: the AWS CLI default profile — no `--profile` flag).
+- **Optional:** A time window like `24h`, `7d`, `mtd` (default: `mtd` = month-to-date).
 
 Examples:
 
-- `/aws-cost-check` — month-to-date audit with default profile
+- `/aws-cost-check` — month-to-date audit with the default AWS profile
 - `/aws-cost-check 24h` — last 24 hours
 - `/aws-cost-check my-profile 7d` — custom profile, last 7 days
 - `/aws-cost-check mtd` — explicit month-to-date
@@ -32,6 +32,10 @@ Examples:
 - The `aws` CLI must be installed and the profile must be authenticated.
 - The profile needs read access to Cost Explorer, CloudWatch, and the ability to list resources
   (Lambda, DynamoDB, SQS, SNS, S3, etc.).
+- If no profile is specified, omit the `--profile` flag from all commands (uses the AWS CLI default).
+- **Region:** Resource enumeration (Lambda, DynamoDB, etc.) is per-region. This audit uses the
+  profile's configured default region. Cost Explorer is global and covers all regions. If the user
+  has resources in multiple regions, note this limitation in the summary.
 
 ## Steps
 
@@ -41,14 +45,17 @@ Examples:
 aws sts get-caller-identity --profile <profile>
 ```
 
-If this fails with a credentials error, run:
+If this fails with a credentials error, check if the profile uses SSO and run:
 
 ```sh
 aws sso login --profile <profile>
 ```
 
-Wait for the user to complete the browser login, then retry. Print the account ID and assumed role
-so the user knows which account is being audited.
+Wait for the user to complete the browser login, then retry. If SSO is not configured, inform the
+user that credentials are not set up and ask how they'd like to authenticate.
+
+Print the account ID, assumed role, and default region so the user knows which account and region are
+being audited.
 
 ### 2. Cost Explorer — top-level billing
 
