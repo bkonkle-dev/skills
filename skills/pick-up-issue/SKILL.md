@@ -85,8 +85,9 @@ Another agent running in parallel may have claimed it between step 1 and now:
 gh issue view <number> -R <owner>/<repo> --json assignees --jq '.assignees | length'
 ```
 
-If the count is > 0, **skip this issue** and go back to step 1 to pick the next candidate. Do not
-attempt to take over an issue another agent has already claimed.
+If the count is > 0, **skip this issue** and try the next candidate from the list gathered in
+step 1. If all candidates have been claimed, re-run the search query from step 1. If the re-query
+also returns no unassigned issues, inform the user that no unclaimed issues are available.
 
 Assign yourself to the issue and add an "in progress" signal:
 

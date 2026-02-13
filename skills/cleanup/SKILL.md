@@ -21,9 +21,7 @@ owned by other active sessions.
 
 1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/`, use
    `<name>`. Otherwise, use `$(basename "$PWD")`.
-2. **Repo root:** Run `git rev-parse --show-toplevel`. If you're inside a worktree, the repo root
-   will be the worktree root — use `git rev-parse --git-common-dir` to find the shared `.git/`
-   directory when needed.
+2. **Repo root:** Run `git rev-parse --show-toplevel`.
 3. **Current branch:** Run `git branch --show-current`.
 4. **Active worktree branches:** List all branches checked out in any worktree. These are
    **off-limits** for deletion:
