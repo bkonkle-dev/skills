@@ -111,19 +111,20 @@ If `$PWD` contains `.claude/worktrees/<name>/`, check whether another session is
 this worktree:
 
 ```sh
-worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
+worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
 if [ -n "$worktree_name" ]; then
   project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
   if [ -n "$project_dir" ]; then
-    active=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | head -1)
+    active_count=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | wc -l | tr -d ' ')
   fi
 fi
 ```
 
-If `active` is non-empty:
+If `active_count` is 2 or more (the current session has its own transcript, so 2+ means another
+session is also active):
 
-- **FAIL** — "Worktree `<name>` has an active session (transcript modified within 5 minutes).
-  Another agent is likely working here — dispatch to a different worktree."
+- **FAIL** — "Worktree `<name>` has an active session (multiple transcripts modified within 5
+  minutes). Another agent is likely working here — dispatch to a different worktree."
 
 If not in a worktree context, skip this check.
 

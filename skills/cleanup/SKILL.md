@@ -110,11 +110,11 @@ before continuing. Do not silently skip warnings.
    (merged or gone-upstream) and you need to switch away from it:
 
    **Worktree context (primary path):** If `$PWD` contains `.claude/worktrees/<name>/`, return to
-   the worktree's designated branch (`claude/<name>`) instead of the default branch. Never run
-   `git switch main` in a worktree — it will fail if `main` is checked out elsewhere:
+   the worktree's designated branch (`claude/<name>`) instead of the default branch. Never switch
+   to the default branch in a worktree — it will fail if that branch is checked out elsewhere:
 
    ```sh
-   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
    if [ -n "$worktree_name" ]; then
      git switch "claude/${worktree_name}"
    else
