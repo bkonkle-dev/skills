@@ -204,6 +204,23 @@ If the repo has a `docs/agent-sessions/` directory, run:
 
 Update `memory.md` with the issue reference and goal throughout the implementation.
 
+### 5.5. Check for prior context
+
+Before implementing, check whether past sessions touched related code. This prevents re-discovering
+solutions or repeating failed approaches.
+
+1. **Check session memories** in `docs/agent-sessions/` for related work:
+   ```sh
+   ls docs/agent-sessions/ 2>/dev/null | grep -i "<issue-keyword>"
+   ```
+   Read any relevant `memory.md` files for decisions and lessons learned.
+
+2. **Search archived transcripts** (if `transcript-archive` is available):
+   ```sh
+   transcript-archive search --repo <owner>/<repo> --limit 5 2>/dev/null
+   ```
+   If a relevant session is found, load it for context before starting implementation.
+
 ### 6. Implement the fix
 
 Read the issue body carefully. Understand the requirements, acceptance criteria, and any linked
