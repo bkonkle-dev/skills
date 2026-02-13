@@ -109,6 +109,32 @@ After adding a new skill, run `./setup.sh` to symlink it into `~/.claude/skills/
 Good skills are **specific**, **sequential**, and **verifiable** — they tell the agent what to do,
 in what order, and how to know it worked.
 
+## Common Pitfalls
+
+Recurring friction patterns from real-world multi-agent usage:
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| Wrong repo targeted | Agent derived repo from wrong remote | Use explicit `owner/repo` argument |
+| Push to wrong branch | Didn't verify tracking before push | Run `git branch -vv` before pushing |
+| CI won't trigger | Stale workflow YAML on branch | Rebase onto latest main |
+| Worktree branch conflict | Tried to switch to `main` | Use `claude/<worktree-name>` instead |
+| Cache misses after runner change | Mixed cache actions | Use repo's standard cache action consistently |
+| Repeated work | Didn't check prior sessions | Read `docs/agent-sessions/` and use `/recall` |
+
+## CLAUDE.md Integration
+
+Skills are generic — they work across repos. For repo-specific behavior, add context to the repo's
+`CLAUDE.md` or `AGENTS.md`:
+
+- **Repository identity** — correct org/repo name to prevent wrong-repo targeting
+- **CI architecture** — runner type, cache action, build constraints
+- **Branch conventions** — naming patterns, protected branches
+- **Verification commands** — test/lint/build commands for the project's toolchain
+
+Skills like `/preflight` read `CLAUDE.md` to validate architecture constraints, so keeping it
+accurate directly reduces agent mistakes.
+
 ## License
 
 MIT

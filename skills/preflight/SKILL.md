@@ -128,6 +128,28 @@ session is also active):
 
 If not in a worktree context, skip this check.
 
+### 7. CI runner architecture
+
+If the repo has a `CLAUDE.md` or `AGENTS.md` that specifies runner architecture requirements (e.g.,
+ARM64 Blacksmith runners), spot-check recent workflow files for compliance:
+
+```sh
+repo_root=$(git rev-parse --show-toplevel)
+if grep -q -i 'blacksmith\|ARM64' "$repo_root/CLAUDE.md" "$repo_root/AGENTS.md" 2>/dev/null; then
+  mismatches=$(grep -r 'runs-on:.*ubuntu-latest' "$repo_root/.github/workflows/" 2>/dev/null | head -5)
+  if [ -n "$mismatches" ]; then
+    echo "WARN: Found ubuntu-latest in workflows — repo expects ARM64/Blacksmith runners"
+  fi
+fi
+```
+
+If mismatches are found:
+
+- **WARN** — "Workflow files use `ubuntu-latest` but the repo specifies ARM64/Blacksmith runners.
+  CI changes should use the documented runner type."
+
+If no architecture requirements are documented, skip this check.
+
 ## Summary
 
 Print all results grouped by severity:

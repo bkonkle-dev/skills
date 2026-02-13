@@ -154,6 +154,14 @@ If any checks fail:
 Do **not** skip or override failing checks. If a check is flaky and the failure is unrelated to the
 PR, note it in a comment but do not bypass it.
 
+If CI workflows fail to **trigger** at all (no runs appear after pushing):
+
+1. Rebase onto the latest base branch — stale workflow YAML is the most common cause.
+2. If still no trigger, push an empty commit: `git commit --allow-empty -m "chore: trigger CI"`
+3. If still no trigger, close and reopen the PR:
+   `gh pr close <number> -R <owner>/<repo> && gh pr reopen <number> -R <owner>/<repo>`
+4. As a last resort, create a new PR from the same branch.
+
 ### 8. Rebase on base branch (with retry loop)
 
 Concurrent merges from other agents move the base branch forward frequently. This step may need to
@@ -216,3 +224,30 @@ Print a summary:
 
 If auto-merge could not be enabled (e.g., the repo doesn't support it), inform the user and suggest
 they merge manually once requirements are satisfied.
+
+### 11. Post-merge cleanup (standalone only)
+
+When `/shepherd-to-merge` is invoked standalone (not as part of `/pick-up-issue`), clean up the local
+branch after the PR merges. If the PR is still pending auto-merge, skip this step.
+
+```sh
+state=$(gh pr view <number> -R <owner>/<repo> --json state --jq .state)
+```
+
+If the state is `MERGED`:
+
+1. Switch away from the PR branch. In a worktree, use `claude/<worktree-name>`:
+   ```sh
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+   if [ -n "$worktree_name" ]; then
+     git switch "claude/${worktree_name}" 2>/dev/null || true
+   else
+     default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+     [ -z "$default" ] && default="main"
+     git switch "$default"
+   fi
+   ```
+2. Delete the local PR branch:
+   ```sh
+   git branch -D <pr-branch>
+   ```

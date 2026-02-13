@@ -128,7 +128,16 @@ before continuing. Do not silently skip warnings.
    the current branch (reason: "cannot switch away — delete after worktree is removed or branch
    is freed") and continue with the remaining candidates.
 
-### 3. Finalize session memory (if applicable)
+### 3. Check for stale stashes
+
+```sh
+git stash list
+```
+
+If stashes exist, **warn the user** — stale stashes are easy to forget and may contain important
+work. List each stash entry so the user can decide whether to apply or drop them.
+
+### 4. Finalize session memory (if applicable)
 
 Check whether a session memory directory exists for the current session and today's date:
 
@@ -139,7 +148,7 @@ ls -d "$(git rev-parse --show-toplevel)/docs/agent-sessions/$(date +%Y-%m-%d)-"*
 If a session directory exists and has not been finalized (contains HTML comment placeholders in
 `memory.md`), remind the user to run `/session-memory finalize` before cleaning up.
 
-### 4. Print summary
+### 5. Print summary
 
 Display:
 

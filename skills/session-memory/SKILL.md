@@ -28,8 +28,11 @@ Before either mode, determine:
    `user/add-oauth` → `add-oauth`).
 2. **Repo root:** Run `git rev-parse --show-toplevel`.
 3. **Branch:** Run `git branch --show-current`.
-4. **Scope:** Derive from branch name or PR number:
-   - If a PR exists for the current branch (`gh pr view --json number --jq .number`), use `pr-{N}`.
+4. **Scope:** Derive from issue number, PR number, or branch name (in priority order):
+   - If the PR body contains `Closes #N` or `Resolves #N`, use `issue-{N}`.
+   - If a PR exists for the current branch (`gh pr view --json number,body --jq .`), use `pr-{N}`.
+   - If the branch name contains an issue reference (e.g., created by `/pick-up-issue`), extract the
+     issue keyword and use `issue-{N}` or the slug as scope.
    - Otherwise, take the branch slug after the `/` (e.g., `bkonkle/add-oauth` → `add-oauth`).
 5. **Date:** Today's date as `YYYY-MM-DD`.
 6. **Session directory:** `docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/`.
