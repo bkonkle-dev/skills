@@ -51,7 +51,6 @@ To install a single skill:
 | **Cleanup** | `/cleanup` | Prunes stale branches, checks for uncommitted work, reminds about session memories |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
-| **Recall** | `/recall` | Searches and loads archived Claude Code transcripts from past sessions via DynamoDB |
 | **Session Memory** | `/session-memory` | Creates structured memory files so future sessions can learn from past decisions |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Reviews a PR, addresses feedback, fixes CI, rebases, and enables auto-merge |
 
@@ -69,8 +68,8 @@ These skills aren't standalone — they compose into a full development lifecycl
        └───────────────────────────────────────────────────────┘
 ```
 
-`/session-memory` and `/recall` run alongside any of these, preserving context across sessions so
-nothing learned gets lost between runs.
+`/session-memory` runs alongside any of these, preserving context across sessions so nothing learned
+gets lost between runs.
 
 ## Extras
 

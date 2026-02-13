@@ -9,7 +9,10 @@ disable-model-invocation: true
 
 Manage session memory artifacts in repos that have opted in via a `docs/agent-sessions/` directory.
 Two modes: `start` creates the session directory with a template `memory.md`; `finalize` checks for
-completeness, updates the index, and stages everything.
+completeness and stages everything.
+
+Session directories are the index — each directory name encodes the date, session name, and scope.
+No shared index file is maintained, so parallel sessions never conflict.
 
 ## Prerequisites
 
@@ -22,7 +25,7 @@ Before either mode, determine:
 
 1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/`, use
    `<name>`. Otherwise, use the branch slug (branch name after the last `/`, e.g.,
-   `bkonkle/add-oauth` → `add-oauth`).
+   `user/add-oauth` → `add-oauth`).
 2. **Repo root:** Run `git rev-parse --show-toplevel`.
 3. **Branch:** Run `git branch --show-current`.
 4. **Scope:** Derive from branch name or PR number:
@@ -58,15 +61,14 @@ Parse `$ARGUMENTS` — if it equals `start` (or is empty), run this mode.
    ```markdown
    # Memory: <title — describe the work>
 
-   | Field      | Value                                 |
-   | ---------- | ------------------------------------- |
-   | Session    | {session-name}                        |
-   | Date       | YYYY-MM-DD                            |
-   | Session ID | {sessionId}                           |
-   | PR         | (pending)                             |
-   | Branch     | {branch}                              |
-   | Issue(s)   | (none yet)                            |
-   | Transcript | `transcript-archive load {sessionId}` |
+   | Field      | Value              |
+   | ---------- | ------------------ |
+   | Session    | {session-name}     |
+   | Date       | YYYY-MM-DD         |
+   | Session ID | {sessionId}        |
+   | PR         | (pending)          |
+   | Branch     | {branch}           |
+   | Issue(s)   | (none yet)         |
 
    ## Goal
 
@@ -100,8 +102,7 @@ Parse `$ARGUMENTS` — if it equals `start` (or is empty), run this mode.
    ```
 
 5. **Print summary** — show the session directory path and the memory file path. Remind to update
-   the memory file incrementally throughout the session. Suggest running
-   `transcript-archive archive` when the session is complete to archive the full transcript.
+   the memory file incrementally throughout the session.
 
 ## Mode: `finalize`
 
@@ -127,21 +128,9 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
 4. **Update session ID.** If `memory.md` still shows `(unknown)` for the Session ID field, attempt
    to detect it again from the JSONL file path.
 
-5. **Update the index.** Read `docs/agent-sessions/README.md` and append a row to the session index
-   table:
-
-   ```markdown
-   | YYYY-MM-DD | {session-name} | {scope} | [Memory](YYYY-MM-DD-{session-name}-{scope}/memory.md) | {sessionId} | {one-line summary} |
-   ```
-
-   If the table doesn't exist yet, create it with headers:
-
-   ```markdown
-   ## Session Index
-
-   | Date | Session | Scope | Memory | Session ID | Summary |
-   |------|---------|-------|--------|------------|---------|
-   ```
+5. **Validate metadata completeness.** Check that the metadata table in `memory.md` has been filled
+   in — Session, Date, Branch, and PR fields should not be placeholders. If any are still
+   placeholders, warn the user.
 
 6. **Stage everything:**
 
@@ -150,5 +139,4 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    ```
 
 7. **Print summary** — confirm the memory file is complete and staged. List any remaining
-   placeholder sections as warnings. Suggest running `transcript-archive archive` to store the full
-   transcript.
+   placeholder sections as warnings.
