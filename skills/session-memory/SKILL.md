@@ -25,7 +25,7 @@ Before either mode, determine:
 
 1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/`, use
    `<name>`. Otherwise, use the branch slug (branch name after the last `/`, e.g.,
-   `bkonkle/add-oauth` → `add-oauth`).
+   `user/add-oauth` → `add-oauth`).
 2. **Repo root:** Run `git rev-parse --show-toplevel`.
 3. **Branch:** Run `git branch --show-current`.
 4. **Scope:** Derive from branch name or PR number:
