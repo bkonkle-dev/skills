@@ -113,7 +113,7 @@ this worktree:
 ```sh
 worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
 if [ -n "$worktree_name" ]; then
-  project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}*" | head -1)
+  project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
   if [ -n "$project_dir" ]; then
     active=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | head -1)
   fi

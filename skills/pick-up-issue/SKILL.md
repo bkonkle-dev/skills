@@ -53,12 +53,15 @@ perform these checks before proceeding:
 1. **Detect worktree name:** Extract `<name>` from the path.
 
 2. **Check for active sessions:** Look for JSONL transcript files modified in the last 5 minutes for
-   this worktree:
+   this worktree. Note: the current session's own transcript **will** match this check — that is
+   expected. This check is meaningful at the very start of the skill, before the session has written
+   significant transcript data. If a recent transcript exists, it belongs to a **prior or concurrent**
+   session:
 
    ```sh
    worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
    if [ -n "$worktree_name" ]; then
-     project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}*" | head -1)
+     project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
      if [ -n "$project_dir" ]; then
        active=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | head -1)
      fi
@@ -69,13 +72,14 @@ perform these checks before proceeding:
    (transcript modified within 5 minutes). Refusing to dispatch — wait for the session to finish
    or use a different worktree."
 
-3. **Record designated branch:** Note the current branch so cleanup can return to it later:
+3. **Record designated branch:** The cleanup skill will independently return to `claude/<name>` in
+   a worktree context. Verify the current branch matches this convention:
 
    ```sh
    designated_branch=$(git branch --show-current)
    ```
 
-   Store this for use in step 12.
+   If the worktree is not on its expected `claude/<name>` branch, warn but proceed.
 
 ### 1. Find a candidate issue
 
@@ -311,7 +315,7 @@ If no status label was added, skip this step.
 ### 12. Clean up
 
 Run the cleanup skill to prune branches and check for loose work. If running in a worktree,
-`/cleanup` will return to the designated branch recorded in step 0 instead of `main`.
+`/cleanup` will return to `claude/<worktree-name>` instead of `main`.
 
 ```
 /cleanup
