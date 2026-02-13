@@ -58,11 +58,15 @@ before continuing. Do not silently skip warnings.
    ```
 
 4. **Triage and delete stale branches:** Combine the two lists (dedup). If the current branch is
-   one of the candidates, first switch to the default branch before iterating:
+   one of the candidates, try to switch to the default branch first:
 
    ```sh
    git switch <default>
    ```
+
+   If `git switch` fails because the default branch is checked out in another worktree, **skip**
+   the current branch (reason: "current branch in worktree — delete after worktree is removed")
+   and continue with the remaining candidates.
 
    For each candidate branch, run the following checks before deleting. Track skipped branches and
    their reasons for the summary.
