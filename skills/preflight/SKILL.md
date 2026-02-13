@@ -105,6 +105,28 @@ If a PR already exists:
 - **INFO** — "Open PR #N already exists for this branch. You may want to work on that PR rather
   than creating a new one."
 
+### 6. Worktree session conflict
+
+If `$PWD` contains `.claude/worktrees/<name>/`, check whether another session is already active in
+this worktree:
+
+```sh
+worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
+if [ -n "$worktree_name" ]; then
+  project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
+  if [ -n "$project_dir" ]; then
+    active=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | head -1)
+  fi
+fi
+```
+
+If `active` is non-empty:
+
+- **FAIL** — "Worktree `<name>` has an active session (transcript modified within 5 minutes).
+  Another agent is likely working here — dispatch to a different worktree."
+
+If not in a worktree context, skip this check.
+
 ## Summary
 
 Print all results grouped by severity:

@@ -109,13 +109,24 @@ before continuing. Do not silently skip warnings.
 5. **Handle the current session's branch:** If the current branch is a candidate for deletion
    (merged or gone-upstream) and you need to switch away from it:
 
+   **Worktree context (primary path):** If `$PWD` contains `.claude/worktrees/<name>/`, return to
+   the worktree's designated branch (`claude/<name>`) instead of the default branch. Never run
+   `git switch main` in a worktree — it will fail if `main` is checked out elsewhere:
+
    ```sh
-   git switch <default>
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)/.*|\1|p')
+   if [ -n "$worktree_name" ]; then
+     git switch "claude/${worktree_name}"
+   else
+     git switch <default>
+   fi
    ```
 
-   If `git switch` fails because the default branch is checked out in another worktree, **skip**
-   the current branch (reason: "default branch checked out in another worktree — delete after
-   worktree is removed") and continue with the remaining candidates.
+   **Non-worktree context (fallback):** Switch to the default branch (`git switch <default>`).
+
+   If `git switch` fails for any reason (branch doesn't exist, checked out elsewhere), **skip**
+   the current branch (reason: "cannot switch away — delete after worktree is removed or branch
+   is freed") and continue with the remaining candidates.
 
 ### 3. Finalize session memory (if applicable)
 
