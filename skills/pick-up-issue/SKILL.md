@@ -80,6 +80,26 @@ perform these checks before proceeding:
 
    If `current_branch` does not match `expected_branch`, warn but proceed.
 
+4. **Ensure worktree branch is current with main:** Before creating a feature branch, rebase the
+   worktree's designated branch onto the latest default branch to prevent stale base commits:
+
+   ```sh
+   git fetch origin
+   default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+   [ -z "$default" ] && default="main"
+   behind=$(git rev-list --count HEAD..origin/$default 2>/dev/null || echo 0)
+   if [ "$behind" -gt 0 ]; then
+     git rebase "origin/$default"
+   fi
+   ```
+
+   If the rebase fails with conflicts, abort and reset the parking branch:
+
+   ```sh
+   git rebase --abort
+   git reset --hard "origin/$default"
+   ```
+
 ### 1. Find a candidate issue
 
 Search for open issues that are not assigned to anyone:

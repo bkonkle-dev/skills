@@ -17,12 +17,14 @@ architecture. It inspects whatever is running in the account.
 
 `<args>` may contain:
 
-- **Optional:** An AWS profile name (default: the AWS CLI default profile — no `--profile` flag).
+- **Optional:** An AWS profile name. If not provided, check the repo's CLAUDE.md for an
+  `## AWS Cost Check` section that specifies a default profile. If no repo-level config exists
+  either, fall back to the AWS CLI default profile (no `--profile` flag).
 - **Optional:** A time window like `24h`, `7d`, `mtd` (default: `mtd` = month-to-date).
 
 Examples:
 
-- `/aws-cost-check` — month-to-date audit with the default AWS profile
+- `/aws-cost-check` — month-to-date audit with the repo-configured or default AWS profile
 - `/aws-cost-check 24h` — last 24 hours
 - `/aws-cost-check my-profile 7d` — custom profile, last 7 days
 - `/aws-cost-check mtd` — explicit month-to-date
@@ -32,27 +34,35 @@ Examples:
 - The `aws` CLI must be installed and the profile must be authenticated.
 - The profile needs read access to Cost Explorer, CloudWatch, and the ability to list resources
   (Lambda, DynamoDB, SQS, SNS, S3, etc.).
-- If no profile is specified, omit the `--profile` flag from all commands (uses the AWS CLI default).
+- **Repo-level configuration:** Repos can define an `## AWS Cost Check` section in their CLAUDE.md
+  to specify a default profile, authentication method (SSO vs static credentials), and alternative
+  profiles for resource enumeration. Always check CLAUDE.md before falling back to defaults.
 - **Region:** Resource enumeration (Lambda, DynamoDB, etc.) is per-region. This audit uses the
   profile's configured default region. Cost Explorer is global and covers all regions. If the user
   has resources in multiple regions, note this limitation in the summary.
 
 ## Steps
 
-### 1. Verify AWS access
+### 1. Check repo configuration and authenticate
+
+First, determine the profile to use:
+
+1. If a profile was specified in `<args>`, use that.
+2. Otherwise, check the repo's CLAUDE.md for an `## AWS Cost Check` section with a default profile.
+3. If neither exists, use the AWS CLI default profile (no `--profile` flag).
+
+Verify credentials:
 
 ```sh
 aws sts get-caller-identity --profile <profile>
 ```
 
-If this fails with a credentials error, check if the profile uses SSO and run:
+If this fails with a credentials error:
 
-```sh
-aws sso login --profile <profile>
-```
-
-Wait for the user to complete the browser login, then retry. If SSO is not configured, inform the
-user that credentials are not set up and ask how they'd like to authenticate.
+- **SSO profiles:** Run `aws sso login --profile <profile>` and wait for the user to complete the
+  browser login, then retry `get-caller-identity`.
+- **Static credentials:** Inform the user that credentials are not configured and ask how they'd
+  like to authenticate.
 
 Print the account ID, assumed role, and default region so the user knows which account and region are
 being audited.

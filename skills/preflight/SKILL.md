@@ -150,6 +150,28 @@ If mismatches are found:
 
 If no architecture requirements are documented, skip this check.
 
+### 8. Branch freshness
+
+Check how far behind the default branch the current branch is:
+
+```sh
+git fetch origin 2>/dev/null
+default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+[ -z "$default" ] && default="main"
+behind=$(git rev-list --count HEAD..origin/$default 2>/dev/null || echo 0)
+```
+
+If `behind` is > 50:
+
+- **FAIL** — "Branch is $behind commits behind `origin/$default` — severely stale. Consider
+  starting a fresh branch from `origin/$default` instead of rebasing."
+
+If `behind` is > 0 (but ≤ 50):
+
+- **WARN** — "Branch is $behind commit(s) behind `origin/$default`. Rebase before starting work
+  to avoid duplicating changes that already landed on main:
+  `git fetch origin && git rebase origin/$default`"
+
 ## Summary
 
 Print all results grouped by severity:

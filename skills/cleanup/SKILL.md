@@ -158,6 +158,9 @@ Display:
 - **Stale branches deleted** — list each, or "none" if all clean
 - **Branches skipped** — list each with its reason ("checked out in a worktree", "has open PR").
   Omit this bullet entirely if nothing was skipped.
+- **Branch freshness** — how many commits behind `origin/<default>` the current branch is. If > 0,
+  suggest rebasing before the next task:
+  `git fetch origin && git rebase origin/<default>`
 - **Warnings** — any uncommitted changes, unpushed commits, or unfinalized session memories (this
   section only appears if there are warnings)
 - **Status** — "ready for next task"
