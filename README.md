@@ -42,7 +42,23 @@ To install a single skill:
 ./install-skill.sh <skill-name>
 ```
 
-### Windows (PowerShell)
+### Windows
+
+**Git Bash (recommended)** — works without elevated privileges:
+
+```sh
+git clone git@github.com:bkonkle-dev/skills.git ~/code/bkonkle/skills
+cd ~/code/bkonkle/skills
+bash setup.sh
+```
+
+To install a single skill:
+
+```sh
+bash install-skill.sh <skill-name>
+```
+
+**PowerShell** — requires Developer Mode (Settings > For developers) or an elevated (admin) prompt:
 
 ```powershell
 git clone git@github.com:bkonkle-dev/skills.git ~\code\bkonkle\skills
@@ -55,9 +71,6 @@ To install a single skill:
 ```powershell
 .\install-skill.ps1 <skill-name>
 ```
-
-> **Note:** Creating symlinks on Windows requires either Developer Mode enabled (Settings >
-> For developers) or an elevated (admin) PowerShell prompt.
 
 ---
 
