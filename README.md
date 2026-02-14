@@ -28,20 +28,41 @@ parallel via `git worktree`, each on its own branch and its own path forward.
 
 ## Quick Start
 
+### Linux / macOS
+
 ```sh
 git clone git@github.com:bkonkle-dev/skills.git ~/code/bkonkle/skills
 cd ~/code/bkonkle/skills
 ./setup.sh
 ```
 
-Skills are symlinked into `~/.claude/skills/`, so changes to this repo are reflected immediately —
-pull the repo and you're up to date. No reinstall needed.
-
 To install a single skill:
 
 ```sh
 ./install-skill.sh <skill-name>
 ```
+
+### Windows (PowerShell)
+
+```powershell
+git clone git@github.com:bkonkle-dev/skills.git ~\code\bkonkle\skills
+cd ~\code\bkonkle\skills
+.\setup.ps1
+```
+
+To install a single skill:
+
+```powershell
+.\install-skill.ps1 <skill-name>
+```
+
+> **Note:** Creating symlinks on Windows requires either Developer Mode enabled (Settings >
+> For developers) or an elevated (admin) PowerShell prompt.
+
+---
+
+Skills are symlinked into `~/.claude/skills/`, so changes to this repo are reflected immediately —
+pull the repo and you're up to date. No reinstall needed.
 
 ## Skills
 
