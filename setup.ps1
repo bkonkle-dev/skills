@@ -42,13 +42,20 @@ function Install-Symlink {
         }
     }
 
-    New-Item -ItemType SymbolicLink -Path $Destination -Target $Source | Out-Null
+    try {
+        New-Item -ItemType SymbolicLink -Path $Destination -Target $Source | Out-Null
+    } catch [System.UnauthorizedAccessException] {
+        Write-Host ''
+        Write-Host 'Error: Symlink creation failed — insufficient privileges.' -ForegroundColor Red
+        Write-Host 'Enable Developer Mode (Settings > For developers) or run as Administrator.'
+        exit 1
+    }
     Write-Host "  $Label -> $Source"
 }
 
 # ── Statusline ────────────────────────────────────────────────────────────
 
-$statuslineSrc = Join-Path $ScriptDir 'statusline\statusline.sh'
+$statuslineSrc = Join-Path (Join-Path $ScriptDir 'statusline') 'statusline.sh'
 $statuslineDst = Join-Path $ClaudeDir 'statusline.sh'
 
 if (Test-Path $statuslineSrc) {
@@ -60,7 +67,7 @@ if (Test-Path $statuslineSrc) {
 $skillsDir = Join-Path $ScriptDir 'skills'
 Get-ChildItem -Directory $skillsDir | ForEach-Object {
     $src = $_.FullName
-    $dst = Join-Path $ClaudeDir "skills\$($_.Name)"
+    $dst = Join-Path (Join-Path $ClaudeDir 'skills') $_.Name
     Install-Symlink -Source $src -Destination $dst -Label "skill/$($_.Name)"
 }
 
@@ -70,7 +77,7 @@ $hooksDir = Join-Path $ScriptDir 'hooks'
 if (Test-Path $hooksDir) {
     Get-ChildItem -File $hooksDir | ForEach-Object {
         $src = $_.FullName
-        $dst = Join-Path $ClaudeDir "hooks\$($_.Name)"
+        $dst = Join-Path (Join-Path $ClaudeDir 'hooks') $_.Name
         Install-Symlink -Source $src -Destination $dst -Label "hook/$($_.Name)"
     }
 }

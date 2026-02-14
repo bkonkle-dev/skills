@@ -44,6 +44,11 @@ if (-not $SkillName) {
     Show-Usage
 }
 
+if ($SkillName -match '[/\\]') {
+    Write-Host "Error: skill name must not contain path separators."
+    exit 1
+}
+
 $src = Join-Path $SkillsDir $SkillName
 
 if (-not (Test-Path $src -PathType Container)) {
@@ -53,7 +58,7 @@ if (-not (Test-Path $src -PathType Container)) {
 }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $ClaudeDir 'skills') | Out-Null
-$dst = Join-Path $ClaudeDir "skills\$SkillName"
+$dst = Join-Path (Join-Path $ClaudeDir 'skills') $SkillName
 
 if (Test-Path $dst) {
     $item = Get-Item $dst -Force
@@ -66,5 +71,12 @@ if (Test-Path $dst) {
     }
 }
 
-New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null
+try {
+    New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null
+} catch [System.UnauthorizedAccessException] {
+    Write-Host ''
+    Write-Host 'Error: Symlink creation failed — insufficient privileges.' -ForegroundColor Red
+    Write-Host 'Enable Developer Mode (Settings > For developers) or run as Administrator.'
+    exit 1
+}
 Write-Host "  skill/$SkillName -> $src"

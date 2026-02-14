@@ -104,8 +104,8 @@ gets lost between runs.
 cd ~/code/bkonkle/skills && git pull
 ```
 
-Since skills are symlinked, existing ones update automatically. Run `./setup.sh` again only to
-pick up newly added skills or hooks.
+Since skills are symlinked, existing ones update automatically. Run `./setup.sh` (or `.\setup.ps1`
+on Windows) again only to pick up newly added skills or hooks.
 
 ## Writing New Skills
 
@@ -125,7 +125,8 @@ who's never seen the codebase — enough context to be autonomous, not so
 much that it's a novel.
 ```
 
-After adding a new skill, run `./setup.sh` to symlink it into `~/.claude/skills/`.
+After adding a new skill, run `./setup.sh` (or `.\setup.ps1` on Windows) to symlink it into
+`~/.claude/skills/`.
 
 Good skills are **specific**, **sequential**, and **verifiable** — they tell the agent what to do,
 in what order, and how to know it worked.
