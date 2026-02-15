@@ -137,7 +137,46 @@ git stash list
 If stashes exist, **warn the user** — stale stashes are easy to forget and may contain important
 work. List each stash entry so the user can decide whether to apply or drop them.
 
-### 4. Finalize session memory (if applicable)
+### 4. Check for orphaned session memories on stale branches
+
+Before deleting branches, check if any contain session memory files that never made it to main.
+This prevents losing session memories that were committed to worktree branches but not included
+in the merged PR.
+
+```sh
+repo_root=$(git rev-parse --show-toplevel)
+default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+[ -z "$default" ] && default="main"
+```
+
+For each branch that is a candidate for deletion (from step 2), check for orphaned session memories:
+
+```sh
+orphaned=$(git diff --name-only "origin/$default" <branch> -- docs/agent-sessions/ 2>/dev/null)
+```
+
+If orphaned session memories are found on a branch about to be deleted:
+
+1. **WARN** the user: "Branch `<branch>` has session memory files not present on `$default`:
+   `<list of files>`. These will be lost if the branch is deleted."
+
+2. **Offer to rescue** them by cherry-picking to a rescue branch:
+   ```sh
+   USERNAME=$(gh api user --jq .login 2>/dev/null || echo "agent")
+   rescue_branch="${USERNAME}/rescue-session-memory-$(date +%Y%m%d-%H%M%S)"
+   git switch -c "$rescue_branch" "origin/$default"
+   git checkout <branch> -- docs/agent-sessions/
+   git add docs/agent-sessions/
+   git commit -m "docs: rescue stranded session memories from branch <branch>"
+   git push -u origin HEAD
+   gh pr create --title "docs: rescue stranded session memories" \
+     --body "Rescues session memory files that were stranded on branch \`<branch>\` after its PR merged."
+   ```
+
+3. Only proceed with branch deletion after session memories are rescued or the user explicitly
+   confirms they can be discarded.
+
+### 5. Finalize session memory (if applicable)
 
 Check whether a session memory directory exists for the current session and today's date:
 
@@ -148,7 +187,7 @@ ls -d "$(git rev-parse --show-toplevel)/docs/agent-sessions/$(date +%Y-%m-%d)-"*
 If a session directory exists and has not been finalized (contains HTML comment placeholders in
 `memory.md`), remind the user to run `/session-memory finalize` before cleaning up.
 
-### 5. Print summary
+### 6. Print summary
 
 Display:
 

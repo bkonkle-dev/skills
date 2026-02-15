@@ -156,6 +156,7 @@ Recurring friction patterns from real-world multi-agent usage:
 | Worktree branch conflict | Tried to switch to `main` | Use `claude/<worktree-name>` instead |
 | Cache misses after runner change | Mixed cache actions | Use repo's standard cache action consistently |
 | Repeated work | Didn't check prior sessions | Read `docs/agent-sessions/` and use `/recall` |
+| Stranded session memories | Memory committed to worktree branch, not in PR | Finalize memory before shepherding; `/cleanup` checks for orphans |
 
 ## CLAUDE.md Integration
 

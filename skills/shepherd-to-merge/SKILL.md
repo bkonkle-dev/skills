@@ -225,14 +225,53 @@ Print a summary:
 If auto-merge could not be enabled (e.g., the repo doesn't support it), inform the user and suggest
 they merge manually once requirements are satisfied.
 
-### 11. Post-merge cleanup (standalone only)
+### 11. Post-merge session memory rescue
 
-When `/shepherd-to-merge` is invoked standalone (not as part of `/pick-up-issue`), clean up the local
-branch after the PR merges. If the PR is still pending auto-merge, skip this step.
+After the PR merges (or when auto-merge is enabled), check whether any session memories are stranded
+on the current branch but missing from the merged PR. Session memories committed to worktree branches
+often get lost when the PR squash-merges a different commit chain.
 
 ```sh
 state=$(gh pr view <number> -R <owner>/<repo> --json state --jq .state)
 ```
+
+If the state is `MERGED`:
+
+1. **Check for session memory commits on the local branch that did not make it to main:**
+   ```sh
+   repo_root=$(git rev-parse --show-toplevel)
+   default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+   [ -z "$default" ] && default="main"
+   git fetch origin "$default"
+
+   # Find session memory files that exist locally but not on main
+   orphaned=$(git diff --name-only "origin/$default" HEAD -- docs/agent-sessions/ 2>/dev/null)
+   ```
+
+2. **If orphaned session memories are found**, rescue them by creating a cleanup PR:
+   ```sh
+   if [ -n "$orphaned" ]; then
+     USERNAME=$(gh api user --jq .login 2>/dev/null || echo "agent")
+     rescue_branch="${USERNAME}/rescue-session-memory-$(date +%Y%m%d-%H%M%S)"
+     git switch -c "$rescue_branch" "origin/$default"
+     git checkout HEAD@{1} -- docs/agent-sessions/
+     git add docs/agent-sessions/
+     git commit -m "docs: rescue stranded session memory from merged PR #<number>
+
+   Why: Session memory was committed to a worktree branch that diverged from the
+   PR's commit chain. The PR merged via squash, leaving the memory stranded."
+     git push -u origin HEAD
+     gh pr create --title "docs: rescue session memory from PR #<number>" \
+       --body "Rescues session memory files that were stranded on a worktree branch after PR #<number> merged via squash."
+   fi
+   ```
+
+   If the rescue PR creation fails, warn the user that session memories need manual rescue.
+
+### 12. Post-merge cleanup (standalone only)
+
+When `/shepherd-to-merge` is invoked standalone (not as part of `/pick-up-issue`), clean up the local
+branch after the PR merges. If the PR is still pending auto-merge, skip this step.
 
 If the state is `MERGED`:
 

@@ -313,7 +313,28 @@ EOF
 
 Use `Closes #<number>` in the body so GitHub auto-closes the issue when the PR merges.
 
-### 9. Shepherd the PR to merge
+### 9. Finalize session memory before shepherding
+
+Before shepherding, ensure the session memory is finalized and included in the PR's commit chain.
+Session memories committed after the PR is created (or on a different branch) can get stranded when
+the PR squash-merges.
+
+If a session memory was started in step 5:
+
+1. Run `/session-memory finalize` to complete and stage the memory file.
+2. Commit the session memory to the **PR branch** (the current feature branch):
+   ```sh
+   git add docs/agent-sessions/
+   git commit -m "docs: finalize session memory for issue #<number>"
+   ```
+3. Push the commit so it's part of the PR:
+   ```sh
+   git push
+   ```
+
+This ensures the session memory is included in the squash-merge commit when the PR lands on main.
+
+### 10. Shepherd the PR to merge
 
 Invoke the shepherd skill to handle review, feedback, CI, and merge:
 
@@ -324,7 +345,7 @@ Invoke the shepherd skill to handle review, feedback, CI, and merge:
 Wait for the shepherd process to complete. If it encounters issues it cannot resolve, surface them
 to the user.
 
-### 10. Confirm the issue is closed
+### 11. Confirm the issue is closed
 
 After the PR is merged, verify the issue was automatically closed:
 
@@ -338,7 +359,7 @@ If the state is not `CLOSED`, close it manually with a reference to the PR:
 gh issue close <number> -R <owner>/<repo> --comment "Resolved in #<pr-number>."
 ```
 
-### 11. Remove in-progress signals
+### 12. Remove in-progress signals
 
 If a `status:in-progress` label was added in step 2, remove it:
 
@@ -348,7 +369,7 @@ gh issue edit <number> -R <owner>/<repo> --remove-label "status:in-progress"
 
 If no status label was added, skip this step.
 
-### 12. Clean up
+### 13. Clean up
 
 Run the cleanup skill to prune branches and check for loose work. If running in a worktree,
 `/cleanup` will attempt to return to `claude/<worktree-name>` instead of the default branch. If
@@ -358,7 +379,7 @@ that branch does not exist or switching fails, it will skip changing branches.
 /cleanup
 ```
 
-### 13. Print summary
+### 14. Print summary
 
 Display:
 
