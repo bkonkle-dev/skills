@@ -135,11 +135,50 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    in — Session, Date, Branch, and PR fields should not be placeholders. If any are still
    placeholders, warn the user.
 
-6. **Stage everything:**
+6. **Verify session memory is in the PR's commit chain.** Session memories committed to a worktree
+   branch can get stranded if the PR merges via squash from a different commit history. Check that
+   the session memory will actually land on main:
+
+   a. **Check if a PR exists for the current branch:**
+      ```sh
+      repo_slug=$(git remote get-url origin | sed -E 's|.*github\.com[:/]||; s|\.git$||')
+      branch=$(git branch --show-current)
+      pr_json=$(gh pr view --json number,headRefName,state --jq '.' 2>/dev/null || echo '{}')
+      pr_number=$(echo "$pr_json" | jq -r '.number // empty')
+      pr_head=$(echo "$pr_json" | jq -r '.headRefName // empty')
+      ```
+
+   b. **If the PR branch differs from the current branch** (e.g., you're on a worktree branch but
+      the PR was created from a different branch), the session memory won't make it to main. Warn:
+      "Session memory is on branch `$branch` but PR #N targets branch `$pr_head`. The memory will
+      be stranded after merge."
+
+      In this case, **cherry-pick the session memory commit to the PR branch**, or suggest creating
+      a separate cleanup PR for the session memory:
+
+      ```sh
+      # Option 1: Cherry-pick to PR branch (preferred if the PR branch is accessible)
+      memory_commit=$(git log --oneline -1 --format='%H' -- docs/agent-sessions/)
+      git stash  # Stash any uncommitted work
+      git switch "$pr_head"
+      git cherry-pick "$memory_commit"
+      git push
+      git switch "$branch"
+      git stash pop 2>/dev/null || true
+      ```
+
+      If cherry-picking is not feasible (e.g., PR branch is on a different remote or has conflicts),
+      note this in the summary and recommend creating a separate PR for the session memory.
+
+   c. **If no PR exists yet**, note that the session memory is staged but remind the agent to ensure
+      it's included when the PR is created.
+
+7. **Stage everything:**
 
    ```sh
    git add docs/agent-sessions/
    ```
 
-7. **Print summary** — confirm the memory file is complete and staged. List any remaining
-   placeholder sections as warnings.
+8. **Print summary** — confirm the memory file is complete and staged. List any remaining
+   placeholder sections as warnings. If the PR branch verification from step 6 flagged any issues,
+   include them prominently in the summary.
