@@ -268,7 +268,50 @@ If the state is `MERGED`:
 
    If the rescue PR creation fails, warn the user that session memories need manual rescue.
 
-### 12. Post-merge cleanup (standalone only)
+### 12. Archive transcript
+
+After a successful merge, automatically archive the current session transcript to S3 and DynamoDB so
+future agents can search and recall this session's context.
+
+**Prerequisites:** The `scripts/transcript-archive` CLI must exist in the repo, and the
+`AWS_PROFILE=agent-write` profile must be available. If either is missing, warn the user and skip
+this step rather than failing.
+
+1. **Detect session ID and repo root:**
+   ```sh
+   repo_root=$(git rev-parse --show-toplevel)
+   ```
+
+   The session ID is available from the JSONL transcript filename. Claude Code exposes it
+   automatically — use the current session's UUID.
+
+2. **Detect context for archive metadata:**
+   ```sh
+   current_branch=$(git branch --show-current)
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+   agent_name="${worktree_name:-shepherd}"
+   ```
+
+3. **Run the archive command:**
+   ```sh
+   AWS_PROFILE=agent-write go run "${repo_root}/scripts/transcript-archive" archive \
+     --session <SESSION_UUID> \
+     --agent "$agent_name" \
+     --repo <owner>/<repo> \
+     --branch "$current_branch" \
+     --pr <number> \
+     --summary "Shepherded PR #<number>: <pr-title>"
+   ```
+
+   If the `scripts/transcript-archive` directory does not exist, skip with a warning:
+   ```
+   Warning: transcript-archive CLI not found — skipping transcript archival.
+   ```
+
+   If the archive command fails (e.g., AWS credentials expired), warn the user but do not treat it
+   as a blocking error. The PR is already merged; transcript archiving is best-effort.
+
+### 13. Post-merge cleanup (standalone only)
 
 When `/shepherd-to-merge` is invoked standalone (not as part of `/pick-up-issue`), clean up the local
 branch after the PR merges. If the PR is still pending auto-merge, skip this step.
