@@ -210,7 +210,10 @@ Use `--squash` by default. If the repo convention prefers merge commits or rebas
 convention instead.
 
 **Do not** use `--admin` or any flag that bypasses branch protections. The PR must satisfy all
-required reviews, status checks, and other branch protection rules before merging.
+status checks and have all review threads resolved before merging. No human review approval is
+required — the only merge gates are CI and resolved threads. If `mergeStateStatus` is `BLOCKED`
+after CI passes, check for unresolved review threads (step 5) rather than assuming human approval
+is needed.
 
 ### 10. Confirm and summarize
 
