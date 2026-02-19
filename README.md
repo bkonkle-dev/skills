@@ -89,6 +89,7 @@ pull the repo and you're up to date. No reinstall needed.
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Session Memory** | `/session-memory` | Creates structured memory files so future sessions can learn from past decisions |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Reviews a PR, addresses feedback, fixes CI, rebases, and enables auto-merge |
+| **TDD** | `/tdd` | Enforces a red-green-refactor workflow to keep changes test-first and regression-resistant |
 
 ### Lifecycle
 
@@ -108,6 +109,9 @@ These skills aren't standalone — they compose into a full development lifecycl
 
 `/session-memory` runs alongside any of these, preserving context across sessions so nothing learned
 gets lost between runs.
+
+`/tdd` is a cross-cutting helper that fits inside implementation steps of `/pick-up-issue` and
+ad-hoc feature work.
 
 ## Extras
 
