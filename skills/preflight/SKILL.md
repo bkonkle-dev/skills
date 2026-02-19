@@ -22,6 +22,7 @@ will still run but skip the repo identity validation.
 
 - You must be inside a git repo (not a bare workspace root).
 - The `gh` CLI must be authenticated.
+- The `aws` CLI is required only for the AWS SSO validity check.
 
 ## Detecting Context
 
@@ -154,7 +155,43 @@ If mismatches are found:
 
 If no architecture requirements are documented, skip this check.
 
-### 8. Branch freshness
+### 8. AWS SSO session validity
+
+When AWS SSO is configured, verify that the current session is valid before dispatching work that
+may require AWS access:
+
+```sh
+if command -v aws >/dev/null 2>&1; then
+  profile="${AWS_PROFILE:-default}"
+  if aws sts get-caller-identity >/dev/null 2>&1; then
+    echo "INFO: AWS session is valid for profile '$profile'"
+  else
+    start_url=$(aws configure get sso_start_url --profile "$profile" 2>/dev/null)
+    if [ -z "$start_url" ] && [ "$profile" = "default" ]; then
+      start_url=$(aws configure get sso_start_url 2>/dev/null)
+    fi
+    if [ -n "$start_url" ]; then
+      echo "FAIL: AWS SSO session is invalid or expired for profile '$profile'. Re-authenticate manually via browser using start URL: $start_url"
+      echo "FAIL: After completing browser auth, run: aws sso login --profile $profile"
+      echo "INFO: Do not attempt browser launch from WSL; complete auth manually on a machine/browser that can access the URL."
+    else
+      echo "INFO: AWS session check failed, but no SSO start URL was found for profile '$profile'; skipping SSO-specific failure."
+    fi
+  fi
+else
+  echo "INFO: aws CLI not found; skipping AWS SSO session validity check."
+fi
+```
+
+If `aws sts get-caller-identity` fails and `sso_start_url` is configured:
+
+- **FAIL** — "AWS SSO session is invalid or expired. Re-authenticate manually with the SSO start
+  URL, then run `aws sso login --profile <profile>`."
+- **INFO** — "In WSL, never attempt automatic browser launch; complete auth manually."
+
+If no SSO start URL is configured (non-SSO credentials), do not fail this check.
+
+### 9. Branch freshness
 
 Check how far behind the default branch the current branch is:
 
