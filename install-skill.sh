@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # ── Single skill installer ──────────────────────────────────────────────
-# Symlinks one skill from this repo into ~/.claude/skills/.
+# Symlinks one skill from this repo into ~/.claude/skills/ and ~/.codex/skills/.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CLAUDE_DIR="$HOME/.claude"
+TARGET_ROOTS=("$HOME/.claude" "$HOME/.codex")
 SKILLS_DIR="$SCRIPT_DIR/skills"
 
 usage() {
@@ -33,17 +33,19 @@ if [ ! -d "$src" ]; then
   usage
 fi
 
-mkdir -p "$CLAUDE_DIR/skills"
-dst="$CLAUDE_DIR/skills/$skill_name"
+for target_root in "${TARGET_ROOTS[@]}"; do
+  mkdir -p "$target_root/skills"
+  dst="$target_root/skills/$skill_name"
 
-if [ -L "$dst" ]; then
-  ln -sf "$src" "$dst"
-elif [ -d "$dst" ]; then
-  echo "Backing up existing $dst → ${dst}.bak"
-  mv "$dst" "${dst}.bak"
-  ln -s "$src" "$dst"
-else
-  ln -s "$src" "$dst"
-fi
+  if [ -L "$dst" ]; then
+    ln -sf "$src" "$dst"
+  elif [ -d "$dst" ]; then
+    echo "Backing up existing $dst -> ${dst}.bak"
+    mv "$dst" "${dst}.bak"
+    ln -s "$src" "$dst"
+  else
+    ln -s "$src" "$dst"
+  fi
 
-echo "✓ skill/$skill_name → $src"
+  echo "✓ ${target_root##*/}/skill/$skill_name -> $src"
+done

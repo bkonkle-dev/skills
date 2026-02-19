@@ -3,7 +3,7 @@
 .SYNOPSIS
     Skills repo installer for Windows (PowerShell equivalent of setup.sh).
 .DESCRIPTION
-    Symlinks skills, statusline, and hooks from this repo into ~/.claude/.
+    Symlinks skills, statusline, and hooks from this repo into ~/.claude/ and ~/.codex/.
     Idempotent — safe to run repeatedly.
 
     Requires either Developer Mode enabled or an elevated (admin) prompt,
@@ -14,11 +14,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ClaudeDir = Join-Path $env:USERPROFILE '.claude'
-
-# Ensure ~/.claude/ directories exist
-New-Item -ItemType Directory -Force -Path (Join-Path $ClaudeDir 'skills') | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $ClaudeDir 'hooks') | Out-Null
+$TargetRoots = @(
+    (Join-Path $env:USERPROFILE '.claude'),
+    (Join-Path $env:USERPROFILE '.codex')
+)
 
 # ── Helper ────────────────────────────────────────────────────────────────
 
@@ -32,10 +31,8 @@ function Install-Symlink {
     if (Test-Path $Destination) {
         $item = Get-Item $Destination -Force
         if ($item.LinkType -eq 'SymbolicLink') {
-            # Already a symlink — remove and recreate
             Remove-Item $Destination -Force
         } else {
-            # Regular file or directory — back it up
             $backup = "$Destination.bak"
             Write-Host "Backing up existing $Destination -> $backup"
             Move-Item $Destination $backup -Force
@@ -50,43 +47,41 @@ function Install-Symlink {
         Write-Host 'Enable Developer Mode (Settings > For developers) or run as Administrator.'
         exit 1
     }
+
     Write-Host "  $Label -> $Source"
 }
 
-# ── Statusline ────────────────────────────────────────────────────────────
+foreach ($targetRoot in $TargetRoots) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $targetRoot 'skills') | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $targetRoot 'hooks') | Out-Null
 
-$statuslineSrc = Join-Path (Join-Path $ScriptDir 'statusline') 'statusline.sh'
-$statuslineDst = Join-Path $ClaudeDir 'statusline.sh'
+    $statuslineSrc = Join-Path (Join-Path $ScriptDir 'statusline') 'statusline.sh'
+    $statuslineDst = Join-Path $targetRoot 'statusline.sh'
+    if (Test-Path $statuslineSrc) {
+        Install-Symlink -Source $statuslineSrc -Destination $statuslineDst -Label "$($targetRoot.Split([IO.Path]::DirectorySeparatorChar)[-1])/statusline"
+    }
 
-if (Test-Path $statuslineSrc) {
-    Install-Symlink -Source $statuslineSrc -Destination $statuslineDst -Label 'statusline'
-}
-
-# ── Skills ────────────────────────────────────────────────────────────────
-
-$skillsDir = Join-Path $ScriptDir 'skills'
-Get-ChildItem -Directory $skillsDir | ForEach-Object {
-    $src = $_.FullName
-    $dst = Join-Path (Join-Path $ClaudeDir 'skills') $_.Name
-    Install-Symlink -Source $src -Destination $dst -Label "skill/$($_.Name)"
-}
-
-# ── Hooks ─────────────────────────────────────────────────────────────────
-
-$hooksDir = Join-Path $ScriptDir 'hooks'
-if (Test-Path $hooksDir) {
-    Get-ChildItem -File $hooksDir | ForEach-Object {
+    $skillsDir = Join-Path $ScriptDir 'skills'
+    Get-ChildItem -Directory $skillsDir | ForEach-Object {
         $src = $_.FullName
-        $dst = Join-Path (Join-Path $ClaudeDir 'hooks') $_.Name
-        Install-Symlink -Source $src -Destination $dst -Label "hook/$($_.Name)"
+        $dst = Join-Path (Join-Path $targetRoot 'skills') $_.Name
+        Install-Symlink -Source $src -Destination $dst -Label "$($targetRoot.Split([IO.Path]::DirectorySeparatorChar)[-1])/skill/$($_.Name)"
+    }
+
+    $hooksDir = Join-Path $ScriptDir 'hooks'
+    if (Test-Path $hooksDir) {
+        Get-ChildItem -File $hooksDir | ForEach-Object {
+            $src = $_.FullName
+            $dst = Join-Path (Join-Path $targetRoot 'hooks') $_.Name
+            Install-Symlink -Source $src -Destination $dst -Label "$($targetRoot.Split([IO.Path]::DirectorySeparatorChar)[-1])/hook/$($_.Name)"
+        }
     }
 }
-
-# ── Summary ───────────────────────────────────────────────────────────────
 
 Write-Host ''
 Write-Host "Done. Skills installed via symlinks from:"
 Write-Host "  $ScriptDir"
 Write-Host ''
+Write-Host "Targets: $($TargetRoots -join ', ')"
 Write-Host 'To update skills, pull this repo — symlinks auto-reflect changes.'
 Write-Host 'To add a new skill, run setup.ps1 again after adding it.'

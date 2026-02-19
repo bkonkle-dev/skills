@@ -19,7 +19,8 @@ owned by other active sessions.
 
 ## Detecting Context
 
-1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/`, use
+1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/` or
+   `.codex/worktrees/<name>/`, use
    `<name>`. Otherwise, use `$(basename "$PWD")`.
 2. **Repo root:** Run `git rev-parse --show-toplevel`.
 3. **Current branch:** Run `git branch --show-current`.
@@ -109,14 +110,16 @@ before continuing. Do not silently skip warnings.
 5. **Handle the current session's branch:** If the current branch is a candidate for deletion
    (merged or gone-upstream) and you need to switch away from it:
 
-   **Worktree context (primary path):** If `$PWD` contains `.claude/worktrees/<name>/`, return to
-   the worktree's designated branch (`claude/<name>`) instead of the default branch. Never switch
+   **Worktree context (primary path):** If `$PWD` contains `.claude/worktrees/<name>/` or
+   `.codex/worktrees/<name>/`, return to the worktree's designated branch
+   (`claude/<name>` or `codex/<name>`) instead of the default branch. Never switch
    to the default branch in a worktree — it will fail if that branch is checked out elsewhere:
 
    ```sh
-   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+   runtime=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/.*|\1|p')
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\2|p')
    if [ -n "$worktree_name" ]; then
-     git switch "claude/${worktree_name}"
+     git switch "${runtime}/${worktree_name}"
    else
      git switch <default>
    fi

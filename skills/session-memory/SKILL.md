@@ -23,7 +23,8 @@ No shared index file is maintained, so parallel sessions never conflict.
 
 Before either mode, determine:
 
-1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/`, use
+1. **Session name:** Extract from `$PWD`. If the path contains `.claude/worktrees/<name>/` or
+   `.codex/worktrees/<name>/`, use
    `<name>`. Otherwise, use the branch slug (branch name after the last `/`, e.g.,
    `user/add-oauth` → `add-oauth`).
 2. **Repo root:** Run `git rev-parse --show-toplevel`.
@@ -36,10 +37,11 @@ Before either mode, determine:
    - Otherwise, take the branch slug after the `/` (e.g., `bkonkle/add-oauth` → `add-oauth`).
 5. **Date:** Today's date as `YYYY-MM-DD`.
 6. **Session directory:** `docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/`.
-7. **Session ID:** Parse from the Claude Code JSONL file path. The session ID is the conversation
-   UUID — look for the most recent `.jsonl` file under `~/.claude/projects/` whose encoded path
-   matches the current repo. The filename (without `.jsonl`) is the session ID. If detection fails,
-   leave as `(unknown)` and note the user can fill it in manually.
+7. **Session ID:** Parse from the agent JSONL transcript path. The session ID is the conversation
+   UUID — look for the most recent `.jsonl` file under `~/.claude/projects/` or
+   `~/.codex/projects/` whose encoded path matches the current repo. The filename (without
+   `.jsonl`) is the session ID. If detection fails, leave as `(unknown)` and note the user can fill
+   it in manually.
 
 If `docs/agent-sessions/` does not exist in the repo root, stop and tell the user the repo has not
 opted in. They can opt in by creating `docs/agent-sessions/README.md`.

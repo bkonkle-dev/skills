@@ -285,13 +285,13 @@ this step rather than failing.
    repo_root=$(git rev-parse --show-toplevel)
    ```
 
-   The session ID is available from the JSONL transcript filename. Claude Code exposes it
-   automatically — use the current session's UUID.
+   The session ID is available from the JSONL transcript filename in Claude Code or Codex — use the
+   current session's UUID.
 
 2. **Detect context for archive metadata:**
    ```sh
    current_branch=$(git branch --show-current)
-   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\2|p')
    agent_name="${worktree_name:-shepherd}"
    ```
 
@@ -321,11 +321,13 @@ branch after the PR merges. If the PR is still pending auto-merge, skip this ste
 
 If the state is `MERGED`:
 
-1. Switch away from the PR branch. In a worktree, use `claude/<worktree-name>`:
+1. Switch away from the PR branch. In a worktree, use `claude/<worktree-name>` or
+   `codex/<worktree-name>`:
    ```sh
-   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+   runtime=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/.*|\1|p')
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\2|p')
    if [ -n "$worktree_name" ]; then
-     git switch "claude/${worktree_name}" 2>/dev/null || true
+     git switch "${runtime}/${worktree_name}" 2>/dev/null || true
    else
      default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
      [ -z "$default" ] && default="main"

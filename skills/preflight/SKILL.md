@@ -107,13 +107,17 @@ If a PR already exists:
 
 ### 6. Worktree session conflict
 
-If `$PWD` contains `.claude/worktrees/<name>/`, check whether another session is already active in
-this worktree:
+If `$PWD` contains `.claude/worktrees/<name>/` or `.codex/worktrees/<name>/`, check whether
+another session is already active in this worktree:
 
 ```sh
-worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+worktree_name=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\2|p')
 if [ -n "$worktree_name" ]; then
-  project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
+  for projects_root in "$HOME/.claude/projects" "$HOME/.codex/projects"; do
+    [ -d "$projects_root" ] || continue
+    project_dir=$(find "$projects_root" -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
+    [ -n "$project_dir" ] && break
+  done
   if [ -n "$project_dir" ]; then
     active_count=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | wc -l | tr -d ' ')
   fi

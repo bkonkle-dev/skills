@@ -47,7 +47,8 @@ git repo, ask the user which repo to target.
 
 ### 0. Worktree safety checks
 
-If the current working directory is inside a git worktree (path contains `.claude/worktrees/<name>/`),
+If the current working directory is inside a git worktree (path contains
+`.claude/worktrees/<name>/` or `.codex/worktrees/<name>/`),
 perform these checks before proceeding:
 
 1. **Detect worktree name:** Extract `<name>` from the path.
@@ -57,9 +58,14 @@ perform these checks before proceeding:
    **2 or more** recent transcripts exist (indicating another session is also active):
 
    ```sh
-   worktree_name=$(echo "$PWD" | sed -n 's|.*/.claude/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\1|p')
+   runtime=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/.*|\1|p')
+   worktree_name=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/\([^/]*\)\(/.*\)\{0,1\}$|\2|p')
    if [ -n "$worktree_name" ]; then
-     project_dir=$(find ~/.claude/projects/ -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
+     for projects_root in "$HOME/.claude/projects" "$HOME/.codex/projects"; do
+       [ -d "$projects_root" ] || continue
+       project_dir=$(find "$projects_root" -maxdepth 1 -type d -name "*worktrees-${worktree_name}" | head -1)
+       [ -n "$project_dir" ] && break
+     done
      if [ -n "$project_dir" ]; then
        active_count=$(find "$project_dir" -name '*.jsonl' -mmin -5 2>/dev/null | wc -l | tr -d ' ')
      fi
@@ -70,12 +76,13 @@ perform these checks before proceeding:
    (multiple transcripts modified within 5 minutes). Refusing to dispatch — wait for the session
    to finish or use a different worktree."
 
-3. **Record current branch:** The cleanup skill will independently return to `claude/<name>` in
-   a worktree context. Verify the current branch matches this convention:
+3. **Record current branch:** The cleanup skill will independently return to
+   `<runtime>/<name>` (`claude/<name>` or `codex/<name>`) in a worktree context. Verify the
+   current branch matches this convention:
 
    ```sh
    current_branch=$(git branch --show-current)
-   expected_branch="claude/${worktree_name}"
+   expected_branch="${runtime}/${worktree_name}"
    ```
 
    If `current_branch` does not match `expected_branch`, warn but proceed.
@@ -306,7 +313,7 @@ Closes #<number>
 
 - [ ] <how to verify the change>
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with Claude Code or Codex
 EOF
 )"
 ```
@@ -372,7 +379,8 @@ If no status label was added, skip this step.
 ### 13. Clean up
 
 Run the cleanup skill to prune branches and check for loose work. If running in a worktree,
-`/cleanup` will attempt to return to `claude/<worktree-name>` instead of the default branch. If
+`/cleanup` will attempt to return to `claude/<worktree-name>` or `codex/<worktree-name>` instead
+of the default branch. If
 that branch does not exist or switching fails, it will skip changing branches.
 
 ```
