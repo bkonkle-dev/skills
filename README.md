@@ -83,12 +83,12 @@ pull the repo and you're up to date. No reinstall needed.
 | Skill | Command | What it does |
 |-------|---------|-------------|
 | **AWS Cost Check** | `/aws-cost-check` | Audits your AWS account for runaway costs, forgotten resources, and free tier overages |
-| **Batch Merge** | `/batch-merge` | Merges multiple PRs sequentially, rebasing between merges to avoid rebase spirals |
+| **Batch Merge** | `/batch-merge` | Queue helper for multi-PR runs; delegates sequential merging workflow |
 | **Cleanup** | `/cleanup` | Prunes stale branches, checks for uncommitted work, reminds about session memories |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Session Memory** | `/session-memory` | Creates structured memory files so future sessions can learn from past decisions |
-| **Shepherd to Merge** | `/shepherd-to-merge` | Reviews a PR, addresses feedback, fixes CI, rebases, and enables auto-merge |
+| **Shepherd to Merge** | `/shepherd-to-merge` | Single-PR or sequential queue mode: reviews, fixes feedback, rebases, and auto-merges |
 | **TDD** | `/tdd` | Enforces a red-green-refactor workflow to keep changes test-first and regression-resistant |
 
 ### Lifecycle

@@ -1,7 +1,7 @@
 ---
 name: shepherd-to-merge
 description: Shepherd a PR through review, feedback resolution, CI checks, and auto-merge
-argument-hint: <owner/repo#number or pr-url>
+argument-hint: <owner/repo#number | pr-url | owner/repo pr-number... | --mine>
 ---
 
 # Shepherd to Merge
@@ -14,48 +14,81 @@ protection rules or security constraints.
 reviews. The goal is to satisfy all merge requirements legitimately.
 
 **Multi-agent safety:** Multiple agents may be shepherding different PRs in parallel. Expect the
-base branch to move frequently as other agents merge. The rebase retry loop in step 8 handles this.
+base branch to move frequently as other agents merge. The rebase retry loop in step 10 handles this.
 Each agent works on its own PR branch and does not modify branches belonging to other sessions.
 
 ## Input
 
-`$ARGUMENTS` should be one of:
+`$ARGUMENTS` supports both single-PR and sequential batch modes.
+
+Single-PR inputs:
 
 - A full PR URL: `https://github.com/owner/repo/pull/123`
 - A repo-qualified reference: `owner/repo#123`
 - A bare PR number: `123` — only works when your current directory is inside a git repo with a
   GitHub remote.
 
+Sequential batch inputs:
+
+- `owner/repo 123 124 125` (explicit queue order)
+- `owner/repo --mine` (discover current user's open PRs and process oldest-updated first)
+
 If `$ARGUMENTS` is empty, ask the user which PR to shepherd — request the full URL or
 `owner/repo#number`.
 
 ## Steps
 
-### 1. Identify the PR
+### 1. Identify repository and PR queue
 
-Parse `$ARGUMENTS` to determine the owner, repo, and PR number:
+Parse `$ARGUMENTS` and normalize it into:
+
+- `owner/repo`
+- `pr_queue` (ordered list of one or more PR numbers)
+- `mode` (`single` or `sequential`)
+
+For single-PR input forms:
 
 - **Full URL** (`https://github.com/owner/repo/pull/123`): extract owner, repo, and number from the
-  URL path.
-- **Qualified reference** (`owner/repo#123`): split on `/` and `#` to get owner, repo, and number.
-- **Bare number** (`123`): attempt to detect the repo from git context:
-  1. Run `git remote get-url origin` to find the GitHub remote.
-  2. Parse `owner/repo` from the remote URL.
-  3. If this fails (not in a git repo), ask the user for the full `owner/repo#number`.
+  URL path and set `pr_queue=[number]`.
+- **Qualified reference** (`owner/repo#123`): split on `/` and `#` and set `pr_queue=[number]`.
+- **Bare number** (`123`): detect owner/repo from `git remote get-url origin` and set
+  `pr_queue=[number]`.
 
-Once you have owner, repo, and number, set the repo reference (`-R owner/repo`) for all subsequent
-`gh` commands.
+For sequential inputs:
 
-Fetch PR details and confirm the PR is open:
+- **Explicit numbers** (`owner/repo 123 124 125`): set `pr_queue` to numbers in provided order.
+- **`--mine`**: discover open PRs authored by current user:
+  ```sh
+  me=$(gh api user --jq .login)
+  gh pr list -R <owner>/<repo> --state open --author "$me" --json number,title,updatedAt,isDraft
+  ```
+  Exclude drafts, then sort oldest-updated first and set `pr_queue` to that order.
+
+If `pr_queue` is empty after filtering, stop with a concise summary.
+
+### 2. Validate each queued PR and report plan
+
+For each PR in `pr_queue`, fetch details and confirm it is open:
 
 ```sh
 gh pr view <number> -R <owner>/<repo> --json number,title,state,headRefName,baseRefName,url,reviews,statusCheckRollup
 ```
 
-If the PR is already merged, print a friendly summary (title, URL, merge status, CI results) and
-stop — no further action needed. If the PR is closed but not merged, inform the user and stop.
+Skip PRs that are already merged or closed; report why each was skipped.
 
-### 2. Check out the PR branch
+Print the final processing queue before continuing. In sequential mode, this is required progress
+context for the operator.
+
+### 3. Process queue one PR at a time
+
+For each PR in `pr_queue`, run steps 4-16 completely before moving to the next PR. Never shepherd
+multiple PRs concurrently from this skill.
+
+After each PR reaches `MERGED`, print a one-line progress update:
+
+- `Completed <index>/<total>: #<number> <title> (<url>)`
+
+### 4. Check out the PR branch
 
 Ensure you're in the repo and check out the PR branch:
 
@@ -63,7 +96,7 @@ Ensure you're in the repo and check out the PR branch:
 gh pr checkout <number>
 ```
 
-### 3. Spawn a review subagent
+### 5. Spawn a review subagent
 
 Use the **Task tool** to launch a subagent that performs a thorough code review of the PR. The
 subagent should:
@@ -75,7 +108,7 @@ subagent should:
 
 Wait for the subagent to return its findings before proceeding.
 
-### 4. Address review feedback
+### 6. Address review feedback
 
 After the subagent returns, check for any existing review comments and GitHub Copilot suggestions on
 the PR:
@@ -103,7 +136,7 @@ For each piece of actionable feedback (from the subagent review, human reviewers
 If any feedback requires clarification or is outside the scope of the PR, leave a reply comment
 explaining why it wasn't addressed rather than ignoring it.
 
-### 5. Resolve all review threads
+### 7. Resolve all review threads
 
 Before proceeding, ensure every review thread on the PR is resolved. Unresolved threads block
 auto-merge on repos with branch protection.
@@ -128,12 +161,12 @@ auto-merge on repos with branch protection.
 
 3. For threads where the feedback was not addressed, leave a reply comment explaining why.
 
-### 6. Re-review after fixes
+### 8. Re-review after fixes
 
-If changes were made in step 4, do a quick self-review of the new commits to make sure the fixes
-are correct and don't introduce new issues. If new problems are found, go back to step 4.
+If changes were made in step 6, do a quick self-review of the new commits to make sure the fixes
+are correct and don't introduce new issues. If new problems are found, go back to step 6.
 
-### 7. Verify CI checks
+### 9. Verify CI checks
 
 Wait for all CI status checks to complete:
 
@@ -162,7 +195,7 @@ If CI workflows fail to **trigger** at all (no runs appear after pushing):
    `gh pr close <number> -R <owner>/<repo> && gh pr reopen <number> -R <owner>/<repo>`
 4. As a last resort, create a new PR from the same branch.
 
-### 8. Rebase on base branch (with retry loop)
+### 10. Rebase on base branch (with retry loop)
 
 Concurrent merges from other agents move the base branch forward frequently. This step may need to
 run multiple times — up to 5 attempts. With many parallel agents, the base branch can move several
@@ -175,7 +208,7 @@ times while CI is running.
    gh pr view <number> -R <owner>/<repo> --json mergeStateStatus --jq .mergeStateStatus
    ```
 
-2. If the status is `CLEAN`, exit the loop — proceed to step 9.
+2. If the status is `CLEAN`, exit the loop — proceed to step 11.
 
 3. Otherwise (`BEHIND`, `DIRTY`, or any other non-clean state):
    a. Fetch the latest base branch:
@@ -197,7 +230,7 @@ times while CI is running.
 4. If all 5 attempts fail to reach `CLEAN`, inform the user — multiple agents are likely merging
    concurrently and manual coordination may be needed.
 
-### 9. Enable auto-merge
+### 11. Enable auto-merge
 
 Once all feedback is addressed and CI is green (or running), enable auto-merge so GitHub merges the
 PR automatically when all branch protection requirements are met:
@@ -212,10 +245,10 @@ convention instead.
 **Do not** use `--admin` or any flag that bypasses branch protections. The PR must satisfy all
 status checks and have all review threads resolved before merging. No human review approval is
 required — the only merge gates are CI and resolved threads. If `mergeStateStatus` is `BLOCKED`
-after CI passes, check for unresolved review threads (step 5) rather than assuming human approval
+after CI passes, check for unresolved review threads (step 7) rather than assuming human approval
 is needed.
 
-### 10. Confirm and summarize
+### 12. Confirm and summarize
 
 Print a summary:
 
@@ -228,7 +261,7 @@ Print a summary:
 If auto-merge could not be enabled (e.g., the repo doesn't support it), inform the user and suggest
 they merge manually once requirements are satisfied.
 
-### 11. Post-merge session memory rescue
+### 13. Post-merge session memory rescue
 
 After the PR merges (or when auto-merge is enabled), check whether any session memories are stranded
 on the current branch but missing from the merged PR. Session memories committed to worktree branches
@@ -271,7 +304,7 @@ If the state is `MERGED`:
 
    If the rescue PR creation fails, warn the user that session memories need manual rescue.
 
-### 12. Archive transcript
+### 14. Archive transcript
 
 After a successful merge, automatically archive the current session transcript to S3 and DynamoDB so
 future agents can search and recall this session's context.
@@ -350,7 +383,7 @@ this step rather than failing.
    If the archive command fails (e.g., AWS credentials expired), warn the user but do not treat it
    as a blocking error. The PR is already merged; transcript archiving is best-effort.
 
-### 13. Post-merge cleanup (standalone only)
+### 15. Post-merge cleanup (standalone only)
 
 When `/shepherd-to-merge` is invoked standalone (not as part of `/pick-up-issue`), clean up the local
 branch after the PR merges. If the PR is still pending auto-merge, skip this step.
@@ -374,3 +407,37 @@ If the state is `MERGED`:
    ```sh
    git branch -D <pr-branch>
    ```
+
+### 16. Rebase remaining queue entries (sequential mode only)
+
+When `mode=sequential` and at least one PR remains in `pr_queue`, update each remaining PR branch
+onto the latest default branch before processing the next PR.
+
+1. Detect default branch once:
+   ```sh
+   default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+   [ -z "$default" ] && default="main"
+   git fetch origin "$default"
+   ```
+2. For each remaining PR in queue order:
+   ```sh
+   gh pr checkout <remaining-number> -R <owner>/<repo>
+   git fetch origin "$default"
+   git rebase "origin/$default"
+   git push --force-with-lease
+   ```
+3. If a rebase conflict occurs, stop batch processing and report:
+   - PR number and branch
+   - conflicted files
+   - exact resume command (`/shepherd-to-merge <owner>/<repo> <remaining-prs...>`)
+
+Do not auto-resolve ambiguous conflicts.
+
+### 17. Final queue report (sequential mode only)
+
+After the queue is exhausted (or processing stops early), print:
+
+- PRs merged (number + URL)
+- PRs skipped (with reason)
+- first blocking PR, if any
+- whether the full queue completed
