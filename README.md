@@ -85,6 +85,7 @@ pull the repo and you're up to date. No reinstall needed.
 | **AWS Cost Check** | `/aws-cost-check` | Audits your AWS account for runaway costs, forgotten resources, and free tier overages |
 | **Batch Merge** | `/batch-merge` | Queue helper for multi-PR runs; delegates sequential merging workflow |
 | **Cleanup** | `/cleanup` | Prunes stale branches, checks for uncommitted work, reminds about session memories |
+| **Pick Up and Merge** | `/pick-up-and-merge` | One-command issue-to-merge pipeline that wraps claim, implementation, shepherding, and cleanup |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Session Memory** | `/session-memory` | Creates structured memory files so future sessions can learn from past decisions |
@@ -115,6 +116,9 @@ gets lost between runs.
 ad-hoc feature work.
 
 `/status` is an operational check-in skill you can run anytime between lifecycle steps.
+
+If you want fewer operator decisions, use `/pick-up-and-merge` as the single-entry variant of the
+full lifecycle.
 
 ## Extras
 
