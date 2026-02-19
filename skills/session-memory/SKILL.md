@@ -11,8 +11,26 @@ Manage session memory artifacts in repos that have opted in via a `docs/agent-se
 Two modes: `start` creates the session directory with a template `memory.md`; `finalize` checks for
 completeness and stages everything.
 
-Session directories are the index — each directory name encodes the date, session name, and scope.
-No shared index file is maintained, so parallel sessions never conflict.
+Use a layered memory model (influenced by OpenClaw):
+
+- **Session artifact (source of truth for one run):**
+  `docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/memory.md`
+- **Working memory log (append-only timeline):**
+  `docs/agent-sessions/memory/YYYY-MM-DD.md`
+- **Durable memory (curated cross-session memory):**
+  `docs/agent-sessions/MEMORY.md`
+
+Session directories still prevent collisions across parallel worktrees, while the log and durable
+files make recall easier across many sessions.
+
+## Memory Rules
+
+1. Never claim memory persistence unless it is written to disk in this repo.
+2. If the user says "remember", "note this", "save this", or equivalent, write it to:
+   - the current session `memory.md`, and
+   - `MEMORY.md` if it is durable (decision, preference, stable fact, recurring pitfall).
+3. Use `memory/YYYY-MM-DD.md` for operational breadcrumbs and chronology; do not curate heavily there.
+4. Use `MEMORY.md` for distilled facts only. Keep entries short, deduplicated, and date-stamped.
 
 ## Prerequisites
 
@@ -100,14 +118,51 @@ Parse `$ARGUMENTS` — if it equals `start` (or is empty), run this mode.
    <!-- - [ ] Unresolved items for future sessions -->
    ```
 
-4. **Stage the new files:**
+4. **Ensure layered memory files exist:**
 
    ```sh
-   git add docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/
+   mkdir -p docs/agent-sessions/memory
+   touch "docs/agent-sessions/memory/YYYY-MM-DD.md"
    ```
 
-5. **Print summary** — show the session directory path and the memory file path. Remind to update
-   the memory file incrementally throughout the session.
+   If `docs/agent-sessions/MEMORY.md` does not exist, create it with:
+
+   ```markdown
+   # Durable Memory
+
+   ## Decisions
+
+   <!-- Stable decisions that future sessions should reuse -->
+
+   ## Preferences
+
+   <!-- User/team preferences and conventions -->
+
+   ## Facts
+
+   <!-- Stable repo or environment facts -->
+
+   ## Pitfalls
+
+   <!-- Repeated failure modes and how to avoid them -->
+   ```
+
+5. **Append a session-open breadcrumb** to `docs/agent-sessions/memory/YYYY-MM-DD.md`:
+
+   ```markdown
+   ## HH:MM {session-name} ({scope})
+   - Started on branch `{branch}`
+   - Session artifact: `docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/memory.md`
+   ```
+
+6. **Stage the new files:**
+
+   ```sh
+   git add docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/ docs/agent-sessions/memory/ docs/agent-sessions/MEMORY.md
+   ```
+
+7. **Print summary** — show all three memory paths and remind the user to update the session
+   `memory.md` incrementally.
 
 ## Mode: `finalize`
 
@@ -137,7 +192,24 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    in — Session, Date, Branch, and PR fields should not be placeholders. If any are still
    placeholders, warn the user.
 
-6. **Stage and commit the session memory:**
+6. **Promote durable memory candidates.**
+
+   Review completed session sections (`Key Decisions`, `Problems Encountered`, `Outcome`,
+   `Follow-ups`) and promote only durable items into `docs/agent-sessions/MEMORY.md`.
+
+   Promotion format:
+
+   ```markdown
+   - YYYY-MM-DD: <fact/decision/pitfall> (source: YYYY-MM-DD-{session-name}-{scope})
+   ```
+
+   Also append a concise session-close note to `docs/agent-sessions/memory/YYYY-MM-DD.md`:
+
+   ```markdown
+   - Finalized `YYYY-MM-DD-{session-name}-{scope}`; durable memory updated.
+   ```
+
+7. **Stage and commit the session memory:**
 
    ```sh
    git add docs/agent-sessions/
@@ -146,7 +218,7 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
 
    The memory must be committed before the next step can verify it's in the PR's commit chain.
 
-7. **Verify session memory is in the PR's commit chain.** Session memories committed to a worktree
+8. **Verify session memory is in the PR's commit chain.** Session memories committed to a worktree
    branch can get stranded if the PR merges via squash from a different commit history. Check that
    the session memory will actually land on main:
 
@@ -179,6 +251,6 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    c. **If no PR exists yet**, remind the agent to ensure the session memory is included when the PR
       is created.
 
-8. **Print summary** — confirm the memory file is complete and committed. List any remaining
-   placeholder sections as warnings. If the PR branch verification from step 7 flagged any issues,
+9. **Print summary** — confirm memory files are complete and committed. List any remaining
+   placeholder sections as warnings. If the PR branch verification from step 8 flagged any issues,
    include them prominently in the summary.
