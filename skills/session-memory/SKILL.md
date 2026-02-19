@@ -39,7 +39,7 @@ Before either mode, determine:
 6. **Session directory:** `docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/`.
 7. **Session ID:** Parse from the agent JSONL transcript path. The session ID is the conversation
    UUID — look for the most recent `.jsonl` file under `~/.claude/projects/` or
-   `~/.codex/projects/` whose encoded path matches the current repo. The filename (without
+   `~/.codex/sessions/` whose encoded path matches the current repo. The filename (without
    `.jsonl`) is the session ID. If detection fails, leave as `(unknown)` and note the user can fill
    it in manually.
 

@@ -285,8 +285,15 @@ this step rather than failing.
    repo_root=$(git rev-parse --show-toplevel)
    ```
 
-   The session ID is available from the JSONL transcript filename in Claude Code or Codex — use the
-   current session's UUID.
+   Detect the current session ID from runtime-specific sources:
+   - Prefer `CODEX_THREAD_ID` in Codex by matching `*${CODEX_THREAD_ID}*.jsonl` under
+     `~/.codex/sessions/` and `~/.codex/archived_sessions/`.
+   - Prefer `CLAUDE_SESSION_ID` in Claude Code by matching `*${CLAUDE_SESSION_ID}*.jsonl` under
+     `~/.claude/projects/`.
+   - If those env vars are unavailable, fall back to the most recent `.jsonl` for the current
+     runtime (`~/.codex/sessions` for Codex; `~/.claude/projects` for Claude).
+   - Use the matched filename without `.jsonl` as `session_id`.
+   - If no JSONL is found, warn and skip archival (best-effort behavior).
 
 2. **Detect context for archive metadata:**
    ```sh
@@ -297,13 +304,42 @@ this step rather than failing.
 
 3. **Run the archive command:**
    ```sh
+   runtime=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/.*|\1|p')
+   session_id=""
+
+   if [ -n "${CODEX_THREAD_ID:-}" ]; then
+     codex_match=$(
+       find "$HOME/.codex/sessions" "$HOME/.codex/archived_sessions" -type f -name "*.jsonl" \
+         2>/dev/null | rg "${CODEX_THREAD_ID}" | head -1
+     )
+     [ -n "$codex_match" ] && session_id=$(basename "$codex_match" .jsonl)
+   fi
+
+   if [ -z "$session_id" ] && [ -n "${CLAUDE_SESSION_ID:-}" ]; then
+     claude_match=$(find "$HOME/.claude/projects" -type f -name "*${CLAUDE_SESSION_ID}*.jsonl" 2>/dev/null | head -1)
+     [ -n "$claude_match" ] && session_id=$(basename "$claude_match" .jsonl)
+   fi
+
+   if [ -z "$session_id" ]; then
+     if [ "$runtime" = "codex" ]; then
+       latest=$(find "$HOME/.codex/sessions" -type f -name "*.jsonl" 2>/dev/null | sort | tail -1)
+     else
+       latest=$(find "$HOME/.claude/projects" -type f -name "*.jsonl" 2>/dev/null | sort | tail -1)
+     fi
+     [ -n "$latest" ] && session_id=$(basename "$latest" .jsonl)
+   fi
+
+   if [ -z "$session_id" ]; then
+     echo "Warning: no session JSONL found for current runtime — skipping transcript archival."
+   else
    AWS_PROFILE=agent-write go run "${repo_root}/scripts/transcript-archive" archive \
-     --session <SESSION_UUID> \
+     --session "$session_id" \
      --agent "$agent_name" \
      --repo <owner>/<repo> \
      --branch "$current_branch" \
      --pr <number> \
      --summary "Shepherded PR #<number>: <pr-title>"
+   fi
    ```
 
    If the `scripts/transcript-archive` directory does not exist, skip with a warning:
