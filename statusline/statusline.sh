@@ -7,8 +7,8 @@ COST=$(echo "$input" | jq -r '.cost.total_cost_usd // 0' | xargs printf '%.2f')
 MODEL=$(echo "$input" | jq -r '.model.display_name // empty')
 
 # Extract session name from worktree path or fall back to basename
-if [[ "$DIR" =~ \.claude/worktrees/([^/]+) ]]; then
-  NAME="${BASH_REMATCH[1]}"
+if [[ "$DIR" =~ \.(claude|codex)/worktrees/([^/]+) ]]; then
+  NAME="${BASH_REMATCH[2]}"
 else
   NAME="$(basename "$DIR")"
 fi

@@ -17,7 +17,7 @@ architecture. It inspects whatever is running in the account.
 
 `<args>` may contain:
 
-- **Optional:** An AWS profile name. If not provided, check the repo's CLAUDE.md for an
+- **Optional:** An AWS profile name. If not provided, check the repo's AGENTS.md or CLAUDE.md for an
   `## AWS Cost Check` section that specifies a default profile. If no repo-level config exists
   either, fall back to the AWS CLI default profile (no `--profile` flag).
 - **Optional:** A time window like `24h`, `7d`, `mtd` (default: `mtd` = month-to-date).
@@ -34,9 +34,9 @@ Examples:
 - The `aws` CLI must be installed and the profile must be authenticated.
 - The profile needs read access to Cost Explorer, CloudWatch, and the ability to list resources
   (Lambda, DynamoDB, SQS, SNS, S3, etc.).
-- **Repo-level configuration:** Repos can define an `## AWS Cost Check` section in their CLAUDE.md
+- **Repo-level configuration:** Repos can define an `## AWS Cost Check` section in their AGENTS.md or CLAUDE.md
   to specify a default profile, authentication method (SSO vs static credentials), and alternative
-  profiles for resource enumeration. Always check CLAUDE.md before falling back to defaults.
+  profiles for resource enumeration. Always check AGENTS.md or CLAUDE.md before falling back to defaults.
 - **Region:** Resource enumeration (Lambda, DynamoDB, etc.) is per-region. This audit uses the
   profile's configured default region. Cost Explorer is global and covers all regions. If the user
   has resources in multiple regions, note this limitation in the summary.
@@ -48,7 +48,7 @@ Examples:
 First, determine the profile to use:
 
 1. If a profile was specified in `<args>`, use that.
-2. Otherwise, check the repo's CLAUDE.md for an `## AWS Cost Check` section with a default profile.
+2. Otherwise, check the repo's AGENTS.md or CLAUDE.md for an `## AWS Cost Check` section with a default profile.
 3. If neither exists, use the AWS CLI default profile (no `--profile` flag).
 
 Verify credentials:

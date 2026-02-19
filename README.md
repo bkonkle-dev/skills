@@ -13,17 +13,17 @@
 
 # Skills
 
-> Reusable [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for autonomous
+> Reusable [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and Codex skills for autonomous
 > development workflows — issue triage, PR shepherding, session memory, and more.
 >
 > _From Colorado, with love._
 
-Skills are slash commands that teach Claude Code _how_ to do complex, multi-step tasks. They're
+Skills are command skills that teach Claude Code and Codex _how_ to do complex, multi-step tasks. They're
 plain Markdown files with structured instructions — readable by humans, executable by bots. Think of
 them as detailed route guides: clear enough for anyone to follow, thorough enough to get the job
 done without hand-holding.
 
-This repo is designed for a **worktree-based workflow**: multiple Claude Code sessions running in
+This repo is designed for a **worktree-based workflow**: multiple agent sessions running in
 parallel via `git worktree`, each on its own branch and its own path forward.
 
 ## Quick Start
@@ -74,7 +74,8 @@ To install a single skill:
 
 ---
 
-Skills are symlinked into `~/.claude/skills/`, so changes to this repo are reflected immediately —
+Skills are symlinked into `~/.claude/skills/` and `~/.codex/skills/`, so changes to this repo are
+reflected immediately —
 pull the repo and you're up to date. No reinstall needed.
 
 ## Skills
@@ -108,7 +109,7 @@ gets lost between runs.
 ## Extras
 
 - **`statusline/statusline.sh`** — CLI statusline showing session name, context %, cost, and model.
-  Detects worktree names from `.claude/worktrees/<name>/` paths.
+  Detects worktree names from `.claude/worktrees/<name>/` and `.codex/worktrees/<name>/` paths.
 - **`hooks/`** — Hook scripts (empty for now — add hooks as needed).
 
 ## Updating
@@ -139,7 +140,7 @@ much that it's a novel.
 ```
 
 After adding a new skill, run `./setup.sh` (or `.\setup.ps1` on Windows) to symlink it into
-`~/.claude/skills/`.
+`~/.claude/skills/` and `~/.codex/skills/`.
 
 Good skills are **specific**, **sequential**, and **verifiable** — they tell the agent what to do,
 in what order, and how to know it worked.
@@ -153,7 +154,7 @@ Recurring friction patterns from real-world multi-agent usage:
 | Wrong repo targeted | Agent derived repo from wrong remote | Use explicit `owner/repo` argument |
 | Push to wrong branch | Didn't verify tracking before push | Run `git branch -vv` before pushing |
 | CI won't trigger | Stale workflow YAML on branch | Rebase onto latest main |
-| Worktree branch conflict | Tried to switch to `main` | Use `claude/<worktree-name>` instead |
+| Worktree branch conflict | Tried to switch to `main` | Use `claude/<worktree-name>` or `codex/<worktree-name>` instead |
 | Cache misses after runner change | Mixed cache actions | Use repo's standard cache action consistently |
 | Repeated work | Didn't check prior sessions | Read `docs/agent-sessions/` and use `/recall` |
 | Stranded session memories | Memory committed to worktree branch, not in PR | Finalize memory before shepherding; `/cleanup` checks for orphans |
@@ -168,7 +169,7 @@ Skills are generic — they work across repos. For repo-specific behavior, add c
 - **Branch conventions** — naming patterns, protected branches
 - **Verification commands** — test/lint/build commands for the project's toolchain
 
-Skills like `/preflight` read `CLAUDE.md` to validate architecture constraints, so keeping it
+Skills like `/preflight` read `AGENTS.md`/`CLAUDE.md` to validate architecture constraints, so keeping those files
 accurate directly reduces agent mistakes.
 
 ## License
