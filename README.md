@@ -83,6 +83,7 @@ pull the repo and you're up to date. No reinstall needed.
 | Skill | Command | What it does |
 |-------|---------|-------------|
 | **AWS Cost Check** | `/aws-cost-check` | Audits your AWS account for runaway costs, forgotten resources, and free tier overages |
+| **Batch Merge** | `/batch-merge` | Merges multiple PRs sequentially, rebasing between merges to avoid rebase spirals |
 | **Cleanup** | `/cleanup` | Prunes stale branches, checks for uncommitted work, reminds about session memories |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
@@ -99,6 +100,8 @@ These skills aren't standalone — they compose into a full development lifecycl
                         / imp- \
                        / lement \
   /preflight  →  /pick-up-issue  →  /shepherd-to-merge  →  /cleanup
+                                 ↘
+                                  /batch-merge  (for multi-PR queues)
        ↑                                                       |
        └───────────────────────────────────────────────────────┘
 ```
