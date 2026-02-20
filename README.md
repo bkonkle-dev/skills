@@ -88,6 +88,7 @@ pull the repo and you're up to date. No reinstall needed.
 | **Pick Up and Merge** | `/pick-up-and-merge` | One-command issue-to-merge pipeline that wraps claim, implementation, shepherding, and cleanup |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
+| **Recall** | `/recall` | Loads relevant prior context from layered session memory and archived transcripts before implementation |
 | **Session Memory** | `/session-memory` | Maintains layered memory (session artifact, daily log, durable memory) so future sessions can reuse decisions reliably |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Single-PR or sequential queue mode: reviews, fixes feedback, rebases, and auto-merges |
 | **Status** | `/status` | One-shot dashboard for open PRs/issues with stuck PR detection |
@@ -109,8 +110,8 @@ These skills aren't standalone — they compose into a full development lifecycl
        └───────────────────────────────────────────────────────┘
 ```
 
-`/session-memory` runs alongside any of these, preserving context across sessions so nothing learned
-gets lost between runs.
+`/recall` should run before implementation to load prior context; `/session-memory` runs during and
+after implementation to persist new context so future sessions can reuse it.
 
 `/tdd` is a cross-cutting helper that fits inside implementation steps of `/pick-up-issue` and
 ad-hoc feature work.
@@ -170,7 +171,7 @@ Recurring friction patterns from real-world multi-agent usage:
 | CI won't trigger | Stale workflow YAML on branch | Rebase onto latest main |
 | Worktree branch conflict | Tried to switch to `main` | Use `claude/<worktree-name>` or `codex/<worktree-name>` instead |
 | Cache misses after runner change | Mixed cache actions | Use repo's standard cache action consistently |
-| Repeated work | Didn't check prior sessions | Read `docs/agent-sessions/` and use `/recall` |
+| Repeated work | Didn't check prior sessions | Run `/recall` and read relevant layered memory + transcript hits before implementing |
 | Stranded session memories | Memory committed to worktree branch, not in PR | Finalize memory before shepherding; `/cleanup` checks for orphans |
 
 ## CLAUDE.md Integration

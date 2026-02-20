@@ -236,17 +236,19 @@ Update `memory.md` with the issue reference and goal throughout the implementati
 Before implementing, check whether past sessions touched related code. This prevents re-discovering
 solutions or repeating failed approaches.
 
-1. **Check session memories** in `docs/agent-sessions/` for related work:
-   ```sh
-   ls docs/agent-sessions/ 2>/dev/null | grep -i "<issue-keyword>"
+1. **Run `/recall`** to gather prior context from layered memory and archived transcripts:
    ```
-   Read any relevant `memory.md` files for decisions and lessons learned.
+   /recall <owner>/<repo> <issue-keyword>
+   ```
+   Review the returned decisions, pitfalls, and follow-ups before writing code.
 
-2. **Search archived transcripts** (if `transcript-archive` is available):
-   ```sh
-   transcript-archive search --repo <owner>/<repo> --limit 5 2>/dev/null
-   ```
-   If a relevant session is found, load it for context before starting implementation.
+2. **Fallback (if `/recall` is unavailable):**
+   - Search `docs/agent-sessions/` for related `memory.md` files and read relevant ones.
+   - If `transcript-archive` is available, run:
+     ```sh
+     transcript-archive search --repo <owner>/<repo> --limit 5 2>/dev/null
+     ```
+   Use findings to avoid repeating prior failed approaches.
 
 ### 6. Implement the fix
 
