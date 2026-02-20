@@ -26,11 +26,13 @@ files make recall easier across many sessions.
 ## Memory Rules
 
 1. Never claim memory persistence unless it is written to disk in this repo.
-2. If the user says "remember", "note this", "save this", or equivalent, write it to:
-   - the current session `memory.md`, and
-   - `MEMORY.md` if it is durable (decision, preference, stable fact, recurring pitfall).
-3. Use `memory/YYYY-MM-DD.md` for operational breadcrumbs and chronology; do not curate heavily there.
-4. Use `MEMORY.md` for distilled facts only. Keep entries short, deduplicated, and date-stamped.
+2. If the user says "remember", "note this", "save this", or equivalent, write it to the current
+   session `memory.md` and clearly mark it if it is durable (decision, preference, stable fact,
+   recurring pitfall) so it can be promoted later.
+3. Use `docs/agent-sessions/memory/YYYY-MM-DD.md` for operational breadcrumbs and chronology during
+   the run; do not curate heavily there.
+4. Update `docs/agent-sessions/MEMORY.md` during `finalize` by promoting durable items from the
+   session artifact. Keep entries short, deduplicated, and date-stamped.
 
 ## Prerequisites
 
@@ -192,7 +194,14 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    in — Session, Date, Branch, and PR fields should not be placeholders. If any are still
    placeholders, warn the user.
 
-6. **Promote durable memory candidates.**
+6. **Ensure layered files exist, then promote durable memory candidates.**
+
+   Before promoting, ensure layered memory files exist. This keeps `finalize` backward-compatible
+   with older sessions that only have `docs/agent-sessions/YYYY-MM-DD-.../memory.md`.
+
+   - If `docs/agent-sessions/MEMORY.md` does not exist, create it using the same template from
+     `start` mode.
+   - If `docs/agent-sessions/memory/YYYY-MM-DD.md` does not exist, create it.
 
    Review completed session sections (`Key Decisions`, `Problems Encountered`, `Outcome`,
    `Follow-ups`) and promote only durable items into `docs/agent-sessions/MEMORY.md`.
@@ -203,10 +212,12 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    - YYYY-MM-DD: <fact/decision/pitfall> (source: YYYY-MM-DD-{session-name}-{scope})
    ```
 
-   Also append a concise session-close note to `docs/agent-sessions/memory/YYYY-MM-DD.md`:
+   Also append a session-close breadcrumb to `docs/agent-sessions/memory/YYYY-MM-DD.md`:
 
    ```markdown
-   - Finalized `YYYY-MM-DD-{session-name}-{scope}`; durable memory updated.
+   ## HH:MM finalize {session-name} ({scope})
+   - Finalized `YYYY-MM-DD-{session-name}-{scope}`
+   - Durable memory updated.
    ```
 
 7. **Stage and commit the session memory:**
