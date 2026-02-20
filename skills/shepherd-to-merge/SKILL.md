@@ -306,12 +306,12 @@ If the state is `MERGED`:
 
 ### 14. Archive transcript
 
-After a successful merge, automatically archive the current session transcript to S3 and DynamoDB so
-future agents can search and recall this session's context.
+After a successful merge, automatically archive the current session transcript so future agents can
+search and recall this session's context.
 
-**Prerequisites:** The `scripts/transcript-archive` CLI must exist in the repo, and the
-`AWS_PROFILE=agent-write` profile must be available. If either is missing, warn the user and skip
-this step rather than failing.
+**Prerequisites:** A repo-specific transcript archive command must exist (commonly
+`scripts/transcript-archive`). If archive tooling or credentials are missing, warn and skip this
+step rather than failing.
 
 1. **Detect session ID and repo root:**
    ```sh
@@ -365,7 +365,7 @@ this step rather than failing.
    if [ -z "$session_id" ]; then
      echo "Warning: no session JSONL found for current runtime — skipping transcript archival."
    else
-   AWS_PROFILE=agent-write go run "${repo_root}/scripts/transcript-archive" archive \
+   ${TRANSCRIPT_ARCHIVE_PREFIX:-} go run "${repo_root}/scripts/transcript-archive" archive \
      --session "$session_id" \
      --agent "$agent_name" \
      --repo <owner>/<repo> \
@@ -374,6 +374,9 @@ this step rather than failing.
      --summary "Shepherded PR #<number>: <pr-title>"
    fi
    ```
+
+   `TRANSCRIPT_ARCHIVE_PREFIX` is optional and lets repos inject required env vars (for example,
+   an AWS profile) without hardcoding private account details in this skill.
 
    If the `scripts/transcript-archive` directory does not exist, skip with a warning:
    ```
