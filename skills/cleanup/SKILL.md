@@ -137,8 +137,28 @@ before continuing. Do not silently skip warnings.
 git stash list
 ```
 
-If stashes exist, **warn the user** — stale stashes are easy to forget and may contain important
-work. List each stash entry so the user can decide whether to apply or drop them.
+If stashes exist, **warn the user** and triage each stash before applying or opening a rescue PR.
+Stash replay can overwrite newer work on `main`.
+
+For each stash (`stash@{n}`):
+
+1. Collect changed files (including untracked):
+   ```sh
+   git stash show --name-status --include-untracked "stash@{n}"
+   ```
+2. Compute stash base commit/time:
+   ```sh
+   stash_base=$(git rev-parse "stash@{n}^1")
+   stash_base_ts=$(git show -s --format=%ct "$stash_base")
+   ```
+3. For each changed file, classify:
+   - **obsolete**: stash blob equals `origin/$default` blob
+   - **stale**: `origin/$default` touched the file after `stash_base_ts`
+   - **regressive**: stash would delete content that exists on `origin/$default`
+   - **safe**: none of the above
+
+If any stash has `stale` or `regressive` files, **stop and ask the user** before restoring anything.
+Do not auto-create PRs from stale/regressive stash content.
 
 ### 4. Check for orphaned session memories on stale branches
 
@@ -152,10 +172,17 @@ default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/re
 [ -z "$default" ] && default="main"
 ```
 
-For each branch that is a candidate for deletion (from step 2), check for orphaned session memories:
+For each branch that is a candidate for deletion (from step 2), check for branch-unique orphaned
+session memories:
 
 ```sh
-orphaned=$(git diff --name-only "origin/$default" <branch> -- docs/agent-sessions/ 2>/dev/null)
+unique_commits=$(git rev-list --count "origin/$default..<branch>")
+if [ "$unique_commits" -eq 0 ]; then
+  orphaned=""
+else
+  orphaned=$(git diff --name-status "origin/$default...<branch>" -- docs/agent-sessions/ 2>/dev/null \
+    | awk '$1 != "D" {print $2}')
+fi
 ```
 
 If orphaned session memories are found on a branch about to be deleted:
@@ -168,8 +195,12 @@ If orphaned session memories are found on a branch about to be deleted:
    USERNAME=$(gh api user --jq .login 2>/dev/null || echo "agent")
    rescue_branch="${USERNAME}/rescue-session-memory-$(date +%Y%m%d-%H%M%S)"
    git switch -c "$rescue_branch" "origin/$default"
-   git checkout <branch> -- docs/agent-sessions/
-   git add docs/agent-sessions/
+   printf '%s\n' "$orphaned" | while read -r file; do
+     [ -n "$file" ] && git checkout <branch> -- "$file"
+   done
+   printf '%s\n' "$orphaned" | while read -r file; do
+     [ -n "$file" ] && git add "$file"
+   done
    git commit -m "docs: rescue stranded session memories from branch <branch>"
    git push -u origin HEAD
    gh pr create --title "docs: rescue stranded session memories" \
@@ -204,5 +235,5 @@ Display:
   suggest rebasing before the next task:
   `git fetch origin && git rebase origin/<default>`
 - **Warnings** — any uncommitted changes, unpushed commits, or unfinalized session memories (this
-  section only appears if there are warnings)
+  section only appears if there are warnings). Include stale/regressive stash triage results here.
 - **Status** — "ready for next task"
