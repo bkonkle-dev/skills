@@ -2,6 +2,7 @@
 name: status
 description: Dashboard of open PRs, open issues, and stuck work
 argument-hint: <owner/repo> [--with-worktrees]
+disable-model-invocation: true
 ---
 
 # Status

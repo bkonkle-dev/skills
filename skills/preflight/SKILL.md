@@ -172,7 +172,7 @@ if command -v aws >/dev/null 2>&1; then
     fi
     if [ -n "$start_url" ]; then
       echo "FAIL: AWS SSO session is invalid or expired for profile '$profile'. Re-authenticate manually via browser using start URL: $start_url"
-      echo "FAIL: After completing browser auth, run: aws sso login --profile $profile"
+      echo "FAIL: After completing browser auth, run: aws sso login --profile \"$profile\""
       echo "INFO: Do not attempt browser launch from WSL; complete auth manually on a machine/browser that can access the URL."
     else
       echo "INFO: AWS session check failed, but no SSO start URL was found for profile '$profile'; skipping SSO-specific failure."

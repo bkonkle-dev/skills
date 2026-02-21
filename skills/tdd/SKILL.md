@@ -1,7 +1,7 @@
 ---
 name: tdd
 description: Drive implementation with a strict red-green-refactor workflow
-argument-hint: [scope or requirement]
+argument-hint: <scope or requirement>
 ---
 
 # TDD

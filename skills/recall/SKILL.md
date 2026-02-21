@@ -1,7 +1,7 @@
 ---
 name: recall
 description: Load relevant prior context from layered session memory and archived transcripts
-argument-hint: <owner/repo> [keywords]
+argument-hint: [owner/repo] [keywords]
 disable-model-invocation: true
 ---
 
@@ -60,14 +60,14 @@ repo_slug=$(git remote get-url origin | sed -E 's|.*github\.com[:/]||; s|\.git$|
 
 ### 2. Read durable memory first
 
-If `docs/agent-sessions/MEMORY.md` exists, read it first and extract relevant entries for current
+If `"$repo_root/docs/agent-sessions/MEMORY.md"` exists, read it first and extract relevant entries for current
 keywords and branch context.
 
 If missing, note that durable memory is not initialized for this repo.
 
 ### 3. Read today's working log
 
-If `docs/agent-sessions/memory/$today.md` exists, read it and capture recent chronology that may
+If `"$repo_root/docs/agent-sessions/memory/$today.md"` exists, read it and capture recent chronology that may
 affect current work.
 
 ### 4. Find matching session artifacts
@@ -75,7 +75,7 @@ affect current work.
 Search session artifacts for the most relevant prior runs:
 
 ```sh
-find docs/agent-sessions -maxdepth 2 -type f -name memory.md 2>/dev/null
+find "$repo_root/docs/agent-sessions" -maxdepth 2 -type f -name memory.md 2>/dev/null
 ```
 
 Prioritize artifacts by:

@@ -64,15 +64,15 @@ Before either mode, determine:
    Use this detection order:
 
    a. Build candidate transcript list from:
-   - `~/.codex/sessions/**/*.jsonl`
-   - `~/.codex/archived_sessions/*.jsonl`
-   - `~/.claude/projects/**/*.jsonl`
+   - `find ~/.codex/sessions -type f -name '*.jsonl' 2>/dev/null`
+   - `find ~/.codex/archived_sessions -maxdepth 1 -type f -name '*.jsonl' 2>/dev/null`
+   - `find ~/.claude/projects -type f -name '*.jsonl' 2>/dev/null`
 
    b. Prefer the most recent candidate whose `session_meta.payload.cwd` contains the current repo
    root path (or current worktree path).
 
    c. Extract the session ID:
-   - First choice: `jq -r 'select(.type=="session_meta") | .payload.id' <file> | head -1`
+   - First choice: `jq -r 'select(.type=="session_meta" and .payload.id != null and .payload.id != "") | .payload.id' <file> | head -1`
    - If missing, parse UUID from filename with:
      `grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'`
    - If still missing and filename starts with `rollout-`, use the rollout filename stem (without

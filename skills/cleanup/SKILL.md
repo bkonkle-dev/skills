@@ -138,7 +138,7 @@ git stash list
 ```
 
 If stashes exist, **warn the user** and triage each stash before applying or opening a rescue PR.
-Stash replay can overwrite newer work on `main`.
+Stash replay can overwrite newer work on `origin/$default`.
 
 For each stash (`stash@{n}`):
 
@@ -160,6 +160,24 @@ For each stash (`stash@{n}`):
 If any stash has `stale` or `regressive` files, **stop and ask the user** before restoring anything.
 Do not auto-create PRs from stale/regressive stash content.
 
+For a safe/manual stash rescue flow, use a dedicated branch and PR:
+
+```sh
+USERNAME=$(gh api user --jq .login 2>/dev/null || echo "agent")
+rescue_branch="${USERNAME}/rescue-stash-$(date +%Y%m%d-%H%M%S)"
+git switch -c "$rescue_branch" "origin/$default"
+git stash show --name-only --include-untracked "stash@{n}" | while read -r file; do
+  [ -n "$file" ] && git checkout "stash@{n}" -- "$file"
+done
+git stash show --name-only --include-untracked "stash@{n}" | while read -r file; do
+  [ -n "$file" ] && git add -- "$file"
+done
+git commit -m "docs: rescue intended stash content from stash@{n}"
+git push -u origin HEAD
+gh pr create --title "docs: rescue stash content (stash@{n})" \
+  --body "Rescues intentionally retained stash content after stale/regressive triage."
+```
+
 ### 4. Check for orphaned session memories on stale branches
 
 Before deleting branches, check if any contain session memory files that never made it to main.
@@ -180,8 +198,7 @@ unique_commits=$(git rev-list --count "origin/$default..<branch>")
 if [ "$unique_commits" -eq 0 ]; then
   orphaned=""
 else
-  orphaned=$(git diff --name-status "origin/$default...<branch>" -- docs/agent-sessions/ 2>/dev/null \
-    | awk '$1 != "D" {print $2}')
+  orphaned=$(git diff --name-only --diff-filter=ACMR "origin/$default" "<branch>" -- docs/agent-sessions/ 2>/dev/null)
 fi
 ```
 
@@ -199,7 +216,7 @@ If orphaned session memories are found on a branch about to be deleted:
      [ -n "$file" ] && git checkout <branch> -- "$file"
    done
    printf '%s\n' "$orphaned" | while read -r file; do
-     [ -n "$file" ] && git add "$file"
+     [ -n "$file" ] && git add -- "$file"
    done
    git commit -m "docs: rescue stranded session memories from branch <branch>"
    git push -u origin HEAD

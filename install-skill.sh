@@ -50,7 +50,7 @@ for target_root in "${TARGET_ROOTS[@]}"; do
   if [ -L "$dst" ]; then
     rm -f "$dst"
     ln -s "$src" "$dst"
-  elif [ -d "$dst" ]; then
+  elif [ -e "$dst" ]; then
     echo "Backing up existing $dst -> ${dst}.bak"
     mv "$dst" "${dst}.bak"
     ln -s "$src" "$dst"
