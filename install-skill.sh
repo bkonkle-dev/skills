@@ -13,10 +13,15 @@ usage() {
   echo ""
   echo "Available skills:"
   for skill_dir in "$SKILLS_DIR"/*/; do
+    [ -f "$skill_dir/SKILL.md" ] || continue
     name="$(basename "$skill_dir")"
-    desc=$(grep '^description:' "$skill_dir/SKILL.md" 2>/dev/null | sed 's/^description:[[:space:]]*//')
-    printf "  %-20s %s\n" "$name" "$desc"
+    desc=$(sed -n 's/^description:[[:space:]]*//p' "$skill_dir/SKILL.md" | head -1)
+    arg_hint=$(sed -n 's/^argument-hint:[[:space:]]*//p' "$skill_dir/SKILL.md" | head -1)
+    [ -n "$arg_hint" ] || arg_hint="-"
+    printf "  %-20s %-24s %s\n" "$name" "arg: $arg_hint" "$desc"
   done
+  echo ""
+  echo "After running setup.sh, see ~/.claude/skills/INDEX.md or ~/.codex/skills/INDEX.md"
   exit 1
 }
 
@@ -33,12 +38,18 @@ if [ ! -d "$src" ]; then
   usage
 fi
 
+if [ ! -f "$src/SKILL.md" ]; then
+  echo "Error: '$skill_name' is missing SKILL.md"
+  exit 1
+fi
+
 for target_root in "${TARGET_ROOTS[@]}"; do
   mkdir -p "$target_root/skills"
   dst="$target_root/skills/$skill_name"
 
   if [ -L "$dst" ]; then
-    ln -sf "$src" "$dst"
+    rm -f "$dst"
+    ln -s "$src" "$dst"
   elif [ -d "$dst" ]; then
     echo "Backing up existing $dst -> ${dst}.bak"
     mv "$dst" "${dst}.bak"

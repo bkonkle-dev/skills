@@ -34,12 +34,16 @@ function Show-Usage {
     Write-Host 'Available skills:'
     Get-ChildItem -Directory $SkillsDir | ForEach-Object {
         $skillMd = Join-Path $_.FullName 'SKILL.md'
-        $desc = ''
-        if (Test-Path $skillMd) {
-            $desc = (Select-String -Path $skillMd -Pattern '^description:' | Select-Object -First 1) -replace '^.*description:\s*', ''
+        if (-not (Test-Path $skillMd)) {
+            return
         }
-        '  {0,-20} {1}' -f $_.Name, $desc
+        $desc = (Select-String -Path $skillMd -Pattern '^description:' | Select-Object -First 1) -replace '^.*description:\s*', ''
+        $argHint = (Select-String -Path $skillMd -Pattern '^argument-hint:' | Select-Object -First 1) -replace '^.*argument-hint:\s*', ''
+        if (-not $argHint) { $argHint = '-' }
+        '  {0,-20} {1,-28} {2}' -f $_.Name, "arg: $argHint", $desc
     }
+    Write-Host ''
+    Write-Host 'After running setup.ps1, see ~/.claude/skills/INDEX.md or ~/.codex/skills/INDEX.md'
     exit 1
 }
 
@@ -58,6 +62,11 @@ if (-not (Test-Path $src -PathType Container)) {
     Write-Host "Error: skill '$SkillName' not found in $SkillsDir\"
     Write-Host ''
     Show-Usage
+}
+
+if (-not (Test-Path (Join-Path $src 'SKILL.md'))) {
+    Write-Host "Error: '$SkillName' is missing SKILL.md"
+    exit 1
 }
 
 foreach ($targetRoot in $TargetRoots) {
