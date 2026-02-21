@@ -1,7 +1,7 @@
 ---
 name: shepherd-to-merge
 description: Shepherd a PR through review, feedback resolution, CI checks, and auto-merge
-argument-hint: <owner/repo#number | pr-url | owner/repo [pr-number... | --mine]>
+argument-hint: <owner/repo#number | pr-url | owner/repo (pr-number... | --mine)>
 ---
 
 # Shepherd to Merge
