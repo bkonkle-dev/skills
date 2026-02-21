@@ -57,11 +57,28 @@ Before either mode, determine:
    - Otherwise, take the branch slug after the `/` (e.g., `bkonkle/add-oauth` → `add-oauth`).
 5. **Date:** Today's date as `YYYY-MM-DD`.
 6. **Session directory:** `docs/agent-sessions/YYYY-MM-DD-{session-name}-{scope}/`.
-7. **Session ID:** Parse from the agent JSONL transcript path. The session ID is the conversation
-   UUID — look for the most recent `.jsonl` file under `~/.claude/projects/` or
-   `~/.codex/sessions/` whose encoded path matches the current repo. The filename (without
-   `.jsonl`) is the session ID. If detection fails, leave as `(unknown)` and note the user can fill
-   it in manually.
+7. **Session ID:** Parse from the agent JSONL transcript path. Prefer the structured
+   `session_meta.payload.id` value from the transcript, and include Codex archived transcripts as a
+   fallback source.
+
+   Use this detection order:
+
+   a. Build candidate transcript list from:
+   - `~/.codex/sessions/**/*.jsonl`
+   - `~/.codex/archived_sessions/*.jsonl`
+   - `~/.claude/projects/**/*.jsonl`
+
+   b. Prefer the most recent candidate whose `session_meta.payload.cwd` contains the current repo
+   root path (or current worktree path).
+
+   c. Extract the session ID:
+   - First choice: `jq -r 'select(.type=="session_meta") | .payload.id' <file> | head -1`
+   - If missing, parse UUID from filename with:
+     `grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'`
+   - If still missing and filename starts with `rollout-`, use the rollout filename stem (without
+     `.jsonl`) as a temporary Session ID and note it is rollout-formatted.
+
+   d. If no candidate matches, leave as `(unknown)` and note the user can fill it manually.
 
 If `docs/agent-sessions/` does not exist in the repo root, stop and tell the user the repo has not
 opted in. They can opt in by creating `docs/agent-sessions/README.md`.
@@ -187,8 +204,9 @@ Parse `$ARGUMENTS` — if it equals `finalize`, run this mode.
    gh pr view --json number --jq .number
    ```
 
-4. **Update session ID.** If `memory.md` still shows `(unknown)` for the Session ID field, attempt
-   to detect it again from the JSONL file path.
+4. **Update session ID.** If `memory.md` still shows `(unknown)` or `(not captured)` for the Session
+   ID field, attempt detection again using the same logic from Detecting Context step 7
+   (`session_meta.payload.id` first, then filename UUID, then rollout stem fallback).
 
 5. **Validate metadata completeness.** Check that the metadata table in `memory.md` has been filled
    in — Session, Date, Branch, and PR fields should not be placeholders. If any are still
