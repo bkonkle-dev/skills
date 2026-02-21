@@ -90,16 +90,14 @@ pull the repo and you're up to date. No reinstall needed.
 These skills aren't standalone — they compose into a full development lifecycle, like
 switchbacks up a fourteener:
 
-```
-                          ___
-                         /   \
-                        / imp- \
-                       / lement \
-  /preflight  →  /pick-up-issue  →  /shepherd-to-merge  →  /cleanup
-                                 ↘
-                                  /batch-merge  (for multi-PR queues)
-       ↑                                                       |
-       └───────────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    P[🏔️ /preflight] --> I[🥾 /pick-up-issue]
+    I --> S[⛰️ /shepherd-to-merge]
+    I -.-> B[🗻 /batch-merge]
+    S --> C[🌲 /cleanup]
+    B --> C
+    C -.-> P
 ```
 
 `/recall` should run before implementation to load prior context; `/session-memory` runs during and
