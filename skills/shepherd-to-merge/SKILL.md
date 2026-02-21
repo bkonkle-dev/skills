@@ -1,7 +1,7 @@
 ---
 name: shepherd-to-merge
 description: Shepherd a PR through review, feedback resolution, CI checks, and auto-merge
-argument-hint: <owner/repo#number | pr-url | owner/repo pr-number... | --mine>
+argument-hint: <owner/repo#number | pr-url | owner/repo [pr-number... | --mine]>
 ---
 
 # Shepherd to Merge
@@ -53,6 +53,8 @@ For single-PR input forms:
 - **Qualified reference** (`owner/repo#123`): split on `/` and `#` and set `pr_queue=[number]`.
 - **Bare number** (`123`): detect owner/repo from `git remote get-url origin` and set
   `pr_queue=[number]`.
+  If repo detection fails (not in a git repo, no `origin`, or non-GitHub remote), stop and ask for
+  `owner/repo#number` or a full PR URL.
 
 For sequential inputs:
 
@@ -60,9 +62,10 @@ For sequential inputs:
 - **`--mine`**: discover open PRs authored by current user:
   ```sh
   me=$(gh api user --jq .login)
-  gh pr list -R <owner>/<repo> --state open --author "$me" --json number,title,updatedAt,isDraft
+  gh pr list -R <owner>/<repo> --state open --author "$me" --json number,updatedAt,isDraft \
+    --jq 'map(select(.isDraft | not)) | sort_by(.updatedAt) | map(.number) | unique | .[]'
   ```
-  Exclude drafts, then sort oldest-updated first and set `pr_queue` to that order.
+  This yields a deterministic queue (non-draft PR numbers, oldest-updated first).
 
 If `pr_queue` is empty after filtering, stop with a concise summary.
 
@@ -71,17 +74,18 @@ If `pr_queue` is empty after filtering, stop with a concise summary.
 For each PR in `pr_queue`, fetch details and confirm it is open:
 
 ```sh
-gh pr view <number> -R <owner>/<repo> --json number,title,state,headRefName,baseRefName,url,reviews,statusCheckRollup
+gh pr view <number> -R <owner>/<repo> --json number,title,state,isDraft,headRefName,baseRefName,url,reviews,statusCheckRollup
 ```
 
-Skip PRs that are already merged or closed; report why each was skipped.
+Skip PRs that are already merged, closed, or draft; report why each was skipped.
+Build a `processing_queue` that excludes skipped PRs and continue with `processing_queue` only.
 
-Print the final processing queue before continuing. In sequential mode, this is required progress
+Print the final `processing_queue` before continuing. In sequential mode, this is required progress
 context for the operator.
 
 ### 3. Process queue one PR at a time
 
-For each PR in `pr_queue`, run steps 4-16 completely before moving to the next PR. Never shepherd
+For each PR in `processing_queue`, run steps 4-16 completely before moving to the next PR. Never shepherd
 multiple PRs concurrently from this skill.
 
 After each PR reaches `MERGED`, print a one-line progress update:
@@ -323,8 +327,9 @@ step rather than failing.
      `~/.codex/sessions/` and `~/.codex/archived_sessions/`.
    - Prefer `CLAUDE_SESSION_ID` in Claude Code by matching `*${CLAUDE_SESSION_ID}*.jsonl` under
      `~/.claude/projects/`.
-   - If those env vars are unavailable, fall back to the most recent `.jsonl` for the current
-     runtime (`~/.codex/sessions` for Codex; `~/.claude/projects` for Claude).
+   - If those env vars are unavailable, detect runtime from path (`.codex/worktrees` or
+     `.claude/worktrees`) and fall back to the most recent `.jsonl` for that runtime.
+   - If runtime cannot be inferred from env or path, scan both roots and use the most recent JSONL.
    - Use the matched filename without `.jsonl` as `session_id`.
    - If no JSONL is found, warn and skip archival (best-effort behavior).
 
@@ -337,14 +342,20 @@ step rather than failing.
 
 3. **Run the archive command:**
    ```sh
-   runtime=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/.*|\1|p')
+   runtime=""
    session_id=""
 
    if [ -n "${CODEX_THREAD_ID:-}" ]; then
-     codex_match=$(
-       find "$HOME/.codex/sessions" "$HOME/.codex/archived_sessions" -type f -name "*.jsonl" \
-         2>/dev/null | rg "${CODEX_THREAD_ID}" | head -1
-     )
+     runtime="codex"
+   elif [ -n "${CLAUDE_SESSION_ID:-}" ]; then
+     runtime="claude"
+   else
+     runtime=$(echo "$PWD" | sed -n 's|.*/\.\(claude\|codex\)/worktrees/.*|\1|p')
+   fi
+
+   if [ -n "${CODEX_THREAD_ID:-}" ]; then
+     codex_match=$(find "$HOME/.codex/sessions" "$HOME/.codex/archived_sessions" -type f \
+       -name "*${CODEX_THREAD_ID}*.jsonl" 2>/dev/null | head -1)
      [ -n "$codex_match" ] && session_id=$(basename "$codex_match" .jsonl)
    fi
 
@@ -355,9 +366,14 @@ step rather than failing.
 
    if [ -z "$session_id" ]; then
      if [ "$runtime" = "codex" ]; then
-       latest=$(find "$HOME/.codex/sessions" -type f -name "*.jsonl" 2>/dev/null | sort | tail -1)
-     else
+       latest=$(find "$HOME/.codex/sessions" "$HOME/.codex/archived_sessions" -type f -name "*.jsonl" 2>/dev/null | sort | tail -1)
+     elif [ "$runtime" = "claude" ]; then
        latest=$(find "$HOME/.claude/projects" -type f -name "*.jsonl" 2>/dev/null | sort | tail -1)
+     else
+       latest=$(
+         find "$HOME/.codex/sessions" "$HOME/.codex/archived_sessions" "$HOME/.claude/projects" \
+           -type f -name "*.jsonl" 2>/dev/null | sort | tail -1
+       )
      fi
      [ -n "$latest" ] && session_id=$(basename "$latest" .jsonl)
    fi
@@ -365,7 +381,7 @@ step rather than failing.
    if [ -z "$session_id" ]; then
      echo "Warning: no session JSONL found for current runtime — skipping transcript archival."
    else
-   ${TRANSCRIPT_ARCHIVE_PREFIX:-} go run "${repo_root}/scripts/transcript-archive" archive \
+   ${TRANSCRIPT_ARCHIVE_PREFIX:+${TRANSCRIPT_ARCHIVE_PREFIX} }go run "${repo_root}/scripts/transcript-archive" archive \
      --session "$session_id" \
      --agent "$agent_name" \
      --repo <owner>/<repo> \
@@ -376,7 +392,8 @@ step rather than failing.
    ```
 
    `TRANSCRIPT_ARCHIVE_PREFIX` is optional and lets repos inject required env vars (for example,
-   an AWS profile) without hardcoding private account details in this skill.
+   an AWS profile) without hardcoding private account details in this skill. Do not include a
+   trailing space in the value; the command above adds spacing automatically when it is set.
 
    If the `scripts/transcript-archive` directory does not exist, skip with a warning:
    ```
@@ -413,20 +430,49 @@ If the state is `MERGED`:
 
 ### 16. Rebase remaining queue entries (sequential mode only)
 
-When `mode=sequential` and at least one PR remains in `pr_queue`, update each remaining PR branch
-onto the latest default branch before processing the next PR.
+When `mode=sequential` and at least one PR remains in `processing_queue`, update each remaining PR
+branch onto its own latest base branch before processing the next PR.
 
-1. Detect default branch once:
+1. Detect current GitHub user once (for push safety):
    ```sh
-   default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
-   [ -z "$default" ] && default="main"
-   git fetch origin "$default"
+   current_user=$(gh api user --jq .login)
    ```
 2. For each remaining PR in queue order:
    ```sh
-   gh pr checkout <remaining-number> -R <owner>/<repo>
-   git fetch origin "$default"
-   git rebase "origin/$default"
+   pr_number=<remaining-number>
+   pr_meta=$(gh pr view "$pr_number" -R <owner>/<repo> \
+     --json state,isDraft,baseRefName,headRefName,author,headRepositoryOwner,viewerCanPush,url)
+   pr_state=$(echo "$pr_meta" | jq -r '.state')
+   is_draft=$(echo "$pr_meta" | jq -r '.isDraft')
+   base_ref=$(echo "$pr_meta" | jq -r '.baseRefName')
+   head_ref=$(echo "$pr_meta" | jq -r '.headRefName')
+   pr_author=$(echo "$pr_meta" | jq -r '.author.login')
+   head_owner=$(echo "$pr_meta" | jq -r '.headRepositoryOwner.login')
+   viewer_can_push=$(echo "$pr_meta" | jq -r '.viewerCanPush')
+
+   if [ "$pr_state" != "OPEN" ] || [ "$is_draft" = "true" ]; then
+     echo "Skipping PR #$pr_number: state=$pr_state draft=$is_draft"
+     continue
+   fi
+
+   if [ "$viewer_can_push" != "true" ]; then
+     echo "Skipping PR #$pr_number: viewer cannot push to head branch."
+     continue
+   fi
+
+   if [ "$pr_author" != "$current_user" ] || [ "$head_owner" != "$current_user" ]; then
+     echo "Skipping PR #$pr_number: PR/head branch not owned by current user."
+     echo "Manual fallback:"
+     echo "  gh pr checkout $pr_number -R <owner>/<repo>"
+     echo "  git fetch origin \"$base_ref\""
+     echo "  git rebase \"origin/$base_ref\""
+     echo "  git push --force-with-lease"
+     continue
+   fi
+
+   gh pr checkout "$pr_number" -R <owner>/<repo>
+   git fetch origin "$base_ref"
+   git rebase "origin/$base_ref"
    git push --force-with-lease
    ```
 3. If a rebase conflict occurs, stop batch processing and report:

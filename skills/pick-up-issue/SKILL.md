@@ -246,7 +246,7 @@ solutions or repeating failed approaches.
    - Search `docs/agent-sessions/` for related `memory.md` files and read relevant ones.
    - If `transcript-archive` is available, run:
      ```sh
-     transcript-archive search --repo <owner>/<repo> --limit 5 2>/dev/null
+     transcript-archive search --repo <owner>/<repo> --limit 5 --query "<issue-keyword>" 2>/dev/null
      ```
    Use findings to avoid repeating prior failed approaches.
 
