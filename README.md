@@ -1,30 +1,21 @@
-```
-                              *
-            /\               /\
-           /  \      *      /  \
-    *     /    \       /\  /    \
-         /      \     /  \/      \        *
-   /\   /   /\   \   /    \      \
-  /  \ /   /  \   \ /      \   /\ \
- /    \/  /    \   /   /\   \ /  \ \
-/______\_/______\_/___/  \___/____\_\__
-        ~    ~  bkonkle-dev/skills
-```
+<p align="center">
+  <img src="https://images.unsplash.com/photo-1692067166728-e2724f563c19?w=1200&h=400&fit=crop&crop=center" alt="Alpine meadow of wildflowers with mountain peaks in the background" width="100%" />
+</p>
 
 # Skills
 
 > Reusable [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and Codex skills for autonomous
 > development workflows — issue triage, PR shepherding, session memory, and more.
 >
-> _From Colorado, with love._
+> _From the wildflower meadows of Colorado, with love._
 
 Skills are command skills that teach Claude Code and Codex _how_ to do complex, multi-step tasks. They're
 plain Markdown files with structured instructions — readable by humans, executable by bots. Think of
-them as detailed route guides: clear enough for anyone to follow, thorough enough to get the job
-done without hand-holding.
+them as detailed trail guides: clear enough for anyone to follow, thorough enough to reach the
+summit without hand-holding.
 
 This repo is designed for a **worktree-based workflow**: multiple agent sessions running in
-parallel via `git worktree`, each on its own branch and its own path forward.
+parallel via `git worktree`, each on its own branch and its own trail to the top.
 
 ## Quick Start
 
@@ -96,7 +87,8 @@ pull the repo and you're up to date. No reinstall needed.
 
 ### Lifecycle
 
-These skills aren't standalone — they compose into a full development lifecycle:
+These skills aren't standalone — they compose into a full development lifecycle, like
+switchbacks up a fourteener:
 
 ```
                           ___
@@ -158,11 +150,11 @@ After adding a new skill, run `./setup.sh` (or `.\setup.ps1` on Windows) to syml
 `~/.claude/skills/` and `~/.codex/skills/`.
 
 Good skills are **specific**, **sequential**, and **verifiable** — they tell the agent what to do,
-in what order, and how to know it worked.
+in what order, and how to know it reached the summit.
 
 ## Common Pitfalls
 
-Recurring friction patterns from real-world multi-agent usage:
+Cairns marking where others have stumbled:
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
@@ -190,3 +182,8 @@ accurate directly reduces agent mistakes.
 ## License
 
 MIT
+
+---
+
+<p align="center"><sub>Happy trails from the high country.</sub></p>
+<p align="center"><sub>Banner: <a href="https://unsplash.com/photos/jiTG4IQo3o4">Alpine Meadow</a> by Brice Cooper on Unsplash</sub></p>
