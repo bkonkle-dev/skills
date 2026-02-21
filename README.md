@@ -15,7 +15,7 @@ them as detailed trail guides: clear enough for anyone to follow, thorough enoug
 summit without hand-holding.
 
 This repo is designed for a **worktree-based workflow**: multiple agent sessions running in
-parallel via `git worktree`, each on its own branch and its own trail to the top.
+parallel via `git worktree`, each on its own branch, blazing its own trail to the summit.
 
 ## Quick Start
 
