@@ -43,6 +43,7 @@ render_skill_index() {
       arg_hint="$(printf '%s\n' "$frontmatter" | sed -n 's/^argument-hint:[[:space:]]*//p' | head -1)"
       [ -n "$name" ] || name="$skill_name"
       [ -n "$arg_hint" ] || arg_hint="-"
+      # shellcheck disable=SC2016
       printf '| `%s` | `/%s` | `%s` | %s |\n' "$name" "$name" "$arg_hint" "$description"
     done
     echo ""
