@@ -36,6 +36,8 @@ Examples:
 - Run from a git repo.
 - `docs/agent-sessions/` is expected for layered memory recall.
 - `transcript-archive` is optional.
+- If the repo has archive env requirements in `AGENTS.md`/`CLAUDE.md` (profile, endpoint override),
+  apply them before archive commands.
 
 ## Steps
 
@@ -91,10 +93,27 @@ Read the top 3-5 relevant artifacts; avoid loading all histories.
 If `transcript-archive` is available:
 
 ```sh
-transcript-archive search --repo "$repo_slug" --limit 5 <keywords...> 2>/dev/null
+since=$(date -u -v-30d '+%Y-%m-%d' 2>/dev/null || date -u -d '30 days ago' '+%Y-%m-%d')
+transcript-archive search --repo "$repo_slug" --since "$since" --limit 10
 ```
 
-Load only clearly relevant hits (same issue/PR, same subsystem, or matching error signatures).
+`transcript-archive search` only supports flag filters. Map keyword hints into supported filters when
+possible:
+
+- `#123` or `issue-123` -> `--issue 123`
+- `pr-123` -> `--pr 123`
+- current branch match -> `--branch "$branch"`
+
+Before archive search, run a lightweight auth probe when `aws` is available:
+
+```sh
+aws sts get-caller-identity >/dev/null 2>&1
+```
+
+If auth fails, continue with layered memory only and report archive lookup as skipped.
+
+Load only clearly relevant hits (same issue/PR, same subsystem, or matching error signatures), then
+run `transcript-archive load <session-id> --format context` only for the top 1-3 hits.
 
 If unavailable, continue without failing.
 

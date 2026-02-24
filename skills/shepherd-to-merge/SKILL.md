@@ -317,6 +317,9 @@ search and recall this session's context.
 `scripts/transcript-archive`). If archive tooling or credentials are missing, warn and skip this
 step rather than failing.
 
+Before running archive commands, check repo guidance (`AGENTS.md`/`CLAUDE.md`) for required
+environment prefixes (for example profile selection or endpoint overrides) and apply them.
+
 1. **Detect session ID and repo root:**
    ```sh
    repo_root=$(git rev-parse --show-toplevel)

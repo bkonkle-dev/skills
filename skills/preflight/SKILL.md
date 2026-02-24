@@ -59,8 +59,13 @@ git branch -vv | grep '^\*'
 
 Check for these problems:
 
+- **Detached HEAD (`git branch --show-current` empty)** — FAIL: "Detached HEAD detected. Create a
+  feature branch from `origin/<default>` before editing."
 - **On `main`/`master` directly** — WARN: "You're on the default branch. Create a feature branch
   before making changes."
+- **Tracking `origin/main` or `origin/master` from a feature branch** — FAIL: "Feature branch is
+  tracking the default branch. Set explicit upstream with
+  `git push -u origin HEAD:refs/heads/<feature-branch>`."
 - **No upstream tracking** — INFO: "Branch has no upstream. Will need `git push -u origin HEAD`."
 - **Tracking wrong remote** — FAIL: "Branch tracks `<upstream>` which doesn't match origin."
 

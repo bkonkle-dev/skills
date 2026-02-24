@@ -38,6 +38,7 @@ files make recall easier across many sessions.
 
 - You must be working inside a repo that has a `docs/agent-sessions/` directory.
 - You must be on a feature branch (not `main`/`master`).
+- You must not be on detached HEAD (`git branch --show-current` must be non-empty).
 
 ## Detecting Context
 
@@ -82,6 +83,12 @@ Before either mode, determine:
 
 If `docs/agent-sessions/` does not exist in the repo root, stop and tell the user the repo has not
 opted in. They can opt in by creating `docs/agent-sessions/README.md`.
+
+## Shell Portability
+
+- Prefer POSIX-compatible shell snippets in this skill (`sh`/`zsh` safe).
+- If you need bash-only builtins (`mapfile`, `read -a`), explicitly run commands through
+  `/bin/bash` to avoid zsh failures.
 
 ## Mode: `start`
 
