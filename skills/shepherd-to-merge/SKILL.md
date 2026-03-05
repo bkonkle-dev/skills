@@ -114,8 +114,9 @@ Wait for the subagent to return its findings before proceeding.
 
 ### 6. Address review feedback
 
-After the subagent returns, check for any existing review comments and GitHub Copilot suggestions on
-the PR:
+After the subagent returns, check for any existing review comments on the PR (including GitHub
+Copilot comments — Copilot provides a single automated review when the PR is created and does not
+re-review on subsequent pushes):
 
 ```sh
 gh api repos/<owner>/<repo>/pulls/<number>/comments --jq '.[] | {id, node_id, path, line, body, user: .user.login}'
@@ -252,6 +253,14 @@ required — the only merge gates are CI and resolved threads. If `mergeStateSta
 after CI passes, check for unresolved review threads (step 7) rather than assuming human approval
 is needed.
 
+**Copilot review note:** GitHub Copilot provides a single automated review when the PR is first
+created. It does **not** re-review after subsequent pushes. Do not request new Copilot reviews or
+wait for Copilot to review new commits — it won't happen. Copilot review is not a merge gate.
+If Copilot left review comments, treat them like any other review thread: address or respond to
+the feedback and resolve the thread. If `mergeStateStatus` remains `BLOCKED` after all threads
+are resolved and CI is green, the issue is likely unrelated to Copilot (check for ruleset
+requirements, workflow file scope restrictions, or other branch protection rules).
+
 ### 12. Confirm and summarize
 
 Print a summary:
@@ -277,32 +286,52 @@ state=$(gh pr view <number> -R <owner>/<repo> --json state --jq .state)
 
 If the state is `MERGED`:
 
-1. **Check for session memory commits on the local branch that did not make it to main:**
+1. **Check for session memory files added on the local branch but absent from main:**
    ```sh
    repo_root=$(git rev-parse --show-toplevel)
    default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
    [ -z "$default" ] && default="main"
    git fetch origin "$default"
 
-   # Find session memory files that exist locally but not on main
-   orphaned=$(git diff --name-only "origin/$default" HEAD -- docs/agent-sessions/ 2>/dev/null)
+   # IMPORTANT: Use --diff-filter=A to only find files ADDED on this branch
+   # (absent from main). Without this filter, files that exist on both branches
+   # but differ (e.g. MEMORY.md) would be included, causing the rescue to
+   # overwrite main's newer version with the worktree's stale copy.
+   orphaned=$(git diff --name-only --diff-filter=A "origin/$default" HEAD -- docs/agent-sessions/ 2>/dev/null)
    ```
 
 2. **If orphaned session memories are found**, rescue them by creating a cleanup PR:
    ```sh
    if [ -n "$orphaned" ]; then
+     # Save the current branch ref before switching
+     source_ref=$(git rev-parse HEAD)
      USERNAME=$(gh api user --jq .login 2>/dev/null || echo "agent")
      rescue_branch="${USERNAME}/rescue-session-memory-$(date +%Y%m%d-%H%M%S)"
      git switch -c "$rescue_branch" "origin/$default"
-     git checkout HEAD@{1} -- docs/agent-sessions/
+
+     # Checkout ONLY the added files (not the entire directory), to avoid
+     # overwriting main's version of shared files like MEMORY.md
+     echo "$orphaned" | while read -r f; do
+       git checkout "$source_ref" -- "$f"
+     done
+
      git add docs/agent-sessions/
-     git commit -m "docs: rescue stranded session memory from merged PR #<number>
+
+     # Validate: the staged diff should contain only additions, never deletions
+     if git diff --cached --numstat | awk '{if ($2 > 0) exit 1}'; then
+       git commit -m "docs: rescue stranded session memory from merged PR #<number>
 
    Why: Session memory was committed to a worktree branch that diverged from the
    PR's commit chain. The PR merged via squash, leaving the memory stranded."
-     git push -u origin HEAD
-     gh pr create --title "docs: rescue session memory from PR #<number>" \
-       --body "Rescues session memory files that were stranded on a worktree branch after PR #<number> merged via squash."
+       git push -u origin HEAD
+       gh pr create --title "docs: rescue session memory from PR #<number>" \
+         --body "Rescues session memory files that were stranded on a worktree branch after PR #<number> merged via squash."
+     else
+       echo "Warning: rescue diff contains deletions — aborting to avoid overwriting main."
+       git checkout -- .
+       git switch -
+       git branch -D "$rescue_branch"
+     fi
    fi
    ```
 

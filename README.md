@@ -81,7 +81,6 @@ pull the repo and you're up to date. No reinstall needed.
 | **Session Memory** | `/session-memory` | Maintains layered memory (session artifact, daily log, durable memory) so future sessions can reuse decisions reliably |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Single-PR or sequential queue mode: reviews, fixes feedback, rebases, and auto-merges |
 | **Status** | `/status` | One-shot dashboard for open PRs/issues with stuck PR detection |
-| **TDD** | `/tdd` | Enforces a red-green-refactor workflow to keep changes test-first and regression-resistant |
 
 ### Lifecycle
 
@@ -98,9 +97,6 @@ graph LR
 
 `/recall` should run before implementation to load prior context; `/session-memory` runs during and
 after implementation to persist new context so future sessions can reuse it.
-
-`/tdd` is a cross-cutting helper that fits inside implementation steps of `/pick-up-issue` and
-ad-hoc feature work.
 
 `/status` is an operational check-in skill you can run anytime between lifecycle steps.
 
