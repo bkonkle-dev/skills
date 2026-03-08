@@ -34,6 +34,9 @@ Examples:
 - The `aws` CLI must be installed and the profile must be authenticated.
 - The profile needs read access to Cost Explorer, CloudWatch, and the ability to list resources
   (Lambda, DynamoDB, SQS, SNS, S3, etc.).
+- If possible, the profile should also be able to read Route 53 global resources, API Gateway
+  custom domains, Budgets, and KMS key metadata. If any of these calls are denied, report the
+  exact permission gap in the summary instead of silently skipping it.
 - **Repo-level configuration:** Repos can define an `## AWS Cost Check` section in their AGENTS.md or CLAUDE.md
   to specify a default profile, authentication method (SSO vs static credentials), and alternative
   profiles for resource enumeration. Always check AGENTS.md or CLAUDE.md before falling back to defaults.
@@ -97,6 +100,22 @@ aws ce get-cost-and-usage --profile <profile> \
 ```
 
 Flag any day where cost is **> 2x the average** of the other days.
+
+If the top billed services do not match the current inventory, drill into those services by
+**usage type** before concluding the audit. This often explains deleted, global, or cross-region
+resources.
+
+Example:
+
+```sh
+aws ce get-cost-and-usage --profile <profile> \
+  --time-period Start=<start>,End=<end> \
+  --granularity MONTHLY \
+  --metrics UnblendedCost \
+  --group-by Type=DIMENSION,Key=USAGE_TYPE \
+  --filter '{"Dimensions":{"Key":"SERVICE","Values":["Amazon DynamoDB"]}}' \
+  --output json
+```
 
 ### 3. Discover active resources
 
@@ -201,9 +220,12 @@ aws cloudwatch get-metric-statistics --profile <profile> \
 ```sh
 aws apigateway get-rest-apis --profile <profile> --output json 2>/dev/null
 aws apigatewayv2 get-apis --profile <profile> --output json 2>/dev/null
+aws apigatewayv2 get-domain-names --profile <profile> --output json 2>/dev/null
 ```
 
 If APIs exist, check invocation counts via CloudWatch (`AWS/ApiGateway`, metric `Count`).
+
+Also list **custom domains** and API mappings.
 
 **Free tier:** 1,000,000 REST API calls/month for 12 months.
 
@@ -223,6 +245,9 @@ aws cloudwatch get-metric-statistics --profile <profile> \
   --period 86400 --statistics Average
 ```
 
+Do not stop at `StandardStorage` if Cost Explorer shows S3 spend but the metric is zero. Check the
+bucket region and inspect other storage classes or Cost Explorer usage types.
+
 **Free tier:** 5 GB storage, 20,000 GET, 2,000 PUT for 12 months.
 
 #### 3g. Bedrock (AI/ML)
@@ -240,15 +265,13 @@ If Bedrock metrics exist, for each model:
 - **OutputTokenCount** (Sum) — if available
 - **InvocationLatency** (Average)
 
-Estimate cost based on model pricing:
+Estimate cost from the **actual model IDs or Cost Explorer usage types you observe**. Do not rely
+on a hard-coded Claude-only price table; accounts may use Anthropic, Nova, or inference profiles.
+If pricing is unclear, report tokens/invocations and the billed amount from Cost Explorer rather
+than guessing.
 
-| Model | Input ($/1M tokens) | Output ($/1M tokens) |
-| --- | --- | --- |
-| Claude Haiku 3.5/4.5 | $0.80 | $4.00 |
-| Claude Sonnet 3.5/4 | $3.00 | $15.00 |
-| Claude Opus 4 | $15.00 | $75.00 |
-
-If token counts aren't available, estimate ~1K input + ~300 output tokens per invocation.
+If token counts aren't available, estimate ~1K input + ~300 output tokens per invocation and mark
+the result as approximate.
 
 **Free tier:** None for Bedrock. Flag this prominently if invocations exist.
 
@@ -280,22 +303,51 @@ Flag if ingestion is **> 4 GB/month** (approaching 5 GB limit).
 
 ```sh
 aws route53 list-hosted-zones --profile <profile> --output json
+aws route53 list-health-checks --profile <profile> --output json 2>/dev/null
+aws route53domains list-domains --profile <profile> --region us-east-1 --output json 2>/dev/null
 ```
 
 Each hosted zone costs $0.50/month. No free tier for hosted zones.
+
+Also check for health checks and registered domains when permissions allow. If these commands are
+denied, report the access gap explicitly because it weakens attribution for Route 53 charges.
 
 #### 3k. CloudWatch Alarms
 
 ```sh
 aws cloudwatch describe-alarms --profile <profile> \
-  --query 'MetricAlarms[].{Name:AlarmName,State:StateValue}' --output json
+  --query '{MetricAlarms: MetricAlarms[].{Name:AlarmName,State:StateValue}, CompositeAlarms: CompositeAlarms[].{Name:AlarmName,State:StateValue}}' --output json
+aws cloudwatch list-dashboards --profile <profile> --output json
 ```
 
 Check for any alarms in **ALARM** state — these indicate active problems.
 
+Count both **metric alarms** and **composite alarms**. If CloudWatch spend is material, fetch Cost
+Explorer usage types so you can separate alarm monitoring from logs, dashboards, and custom metrics.
+
 **Free tier:** 10 alarms always-free.
 
-#### 3l. EC2 / ECS / EKS / RDS
+#### 3l. KMS
+
+```sh
+aws kms list-keys --profile <profile> --output json
+aws kms list-aliases --profile <profile> --output json
+```
+
+If AWS KMS appears in Cost Explorer, inventory keys and aliases. Use Cost Explorer usage types for
+precise attribution.
+
+**Free tier:** None for customer-managed keys.
+
+#### 3m. AWS Budgets
+
+```sh
+aws budgets describe-budgets --profile <profile> --account-id <account-id> --output json
+```
+
+List budget names, time units, limits, and notification thresholds.
+
+#### 3n. EC2 / ECS / EKS / RDS
 
 Quick check for running compute that might be burning money:
 
@@ -343,6 +395,9 @@ Flag anything unusual:
 - **Idle expensive resources:** Running EC2/RDS/ECS with zero or near-zero utilization
 - **Cost spikes:** Any day with cost > 2x the average
 - **Alarms firing:** Any CloudWatch alarm in ALARM state
+- **Spend without matching inventory:** A billed service has meaningful cost but the current
+  resource inventory is empty or near-empty; usually means deleted earlier-in-window resources,
+  global resources, cross-region resources, or missing permissions
 
 ### 6. Print summary
 
@@ -360,3 +415,5 @@ Present the results in clear sections:
    - 🟢 OK: everything within normal parameters
 8. **Estimated Cost Without Free Tier** — what the bill would be at full pricing, so the user
    understands their actual resource consumption
+9. **Attribution Gaps** — any denied API calls, cross-region blind spots, or billed services whose
+   current inventory did not explain the spend
