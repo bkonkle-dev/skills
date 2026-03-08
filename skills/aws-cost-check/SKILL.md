@@ -34,9 +34,9 @@ Examples:
 - The `aws` CLI must be installed and the profile must be authenticated.
 - The profile needs read access to Cost Explorer, CloudWatch, and the ability to list resources
   (Lambda, DynamoDB, SQS, SNS, S3, etc.).
-- For newer refactored stacks, the profile should ideally also be able to read Route 53 global
-  resources, API Gateway custom domains, Budgets, and KMS key metadata. If any of these calls are
-  denied, report the exact permission gap in the summary instead of silently skipping it.
+- If possible, the profile should also be able to read Route 53 global resources, API Gateway
+  custom domains, Budgets, and KMS key metadata. If any of these calls are denied, report the
+  exact permission gap in the summary instead of silently skipping it.
 - **Repo-level configuration:** Repos can define an `## AWS Cost Check` section in their AGENTS.md or CLAUDE.md
   to specify a default profile, authentication method (SSO vs static credentials), and alternative
   profiles for resource enumeration. Always check AGENTS.md or CLAUDE.md before falling back to defaults.
@@ -101,10 +101,9 @@ aws ce get-cost-and-usage --profile <profile> \
 
 Flag any day where cost is **> 2x the average** of the other days.
 
-If the top billed services do not match the currently discovered resources, drill into those
-services by **usage type** (and region when useful) before concluding the audit. This catches
-deleted earlier-in-window resources, global services, and recently refactored infrastructure that
-may not show up in a single region inventory pass.
+If the top billed services do not match the current inventory, drill into those services by
+**usage type** before concluding the audit. This often explains deleted, global, or cross-region
+resources.
 
 Example:
 
@@ -226,9 +225,7 @@ aws apigatewayv2 get-domain-names --profile <profile> --output json 2>/dev/null
 
 If APIs exist, check invocation counts via CloudWatch (`AWS/ApiGateway`, metric `Count`).
 
-Also list **custom domains** and API mappings. Refactors that move services behind HTTP API custom
-domains can leave billing concentrated in API Gateway and Route 53 even when the base API inventory
-looks small.
+Also list **custom domains** and API mappings.
 
 **Free tier:** 1,000,000 REST API calls/month for 12 months.
 
@@ -249,9 +246,7 @@ aws cloudwatch get-metric-statistics --profile <profile> \
 ```
 
 Do not stop at `StandardStorage` if Cost Explorer shows S3 spend but the metric is zero. Check the
-bucket region and inspect other storage classes present in `AWS/S3` metrics or the Cost Explorer
-usage types (for example RRS, IA, Glacier/Deep Archive, request tiers). This is required for
-refactored buckets and legacy storage classes.
+bucket region and inspect other storage classes or Cost Explorer usage types.
 
 **Free tier:** 5 GB storage, 20,000 GET, 2,000 PUT for 12 months.
 
@@ -270,16 +265,10 @@ If Bedrock metrics exist, for each model:
 - **OutputTokenCount** (Sum) — if available
 - **InvocationLatency** (Average)
 
-Estimate cost based on the **actual model IDs or Cost Explorer usage types you observe**. Do not
-assume the account only uses Anthropic models; newer stacks may use Amazon Nova models (Micro/Lite/Pro)
-or inference profiles that will not match a hard-coded Claude-only table.
-
-Preferred order:
-
-1. Use Cost Explorer usage types when they already identify the billed model/token class.
-2. Otherwise map the observed model ID to the provider's current pricing.
-3. If pricing is unclear, report tokens/invocations and the billed amount from Cost Explorer rather
-   than inventing a stale estimate.
+Estimate cost from the **actual model IDs or Cost Explorer usage types you observe**. Do not rely
+on a hard-coded Claude-only price table; accounts may use Anthropic, Nova, or inference profiles.
+If pricing is unclear, report tokens/invocations and the billed amount from Cost Explorer rather
+than guessing.
 
 If token counts aren't available, estimate ~1K input + ~300 output tokens per invocation and mark
 the result as approximate.
@@ -320,9 +309,8 @@ aws route53domains list-domains --profile <profile> --region us-east-1 --output 
 
 Each hosted zone costs $0.50/month. No free tier for hosted zones.
 
-Also check for health checks and registered domains when permissions allow. Route 53 spend often
-comes from global resources that are easy to miss during region-scoped inventory. If these commands
-are denied, report the access gap explicitly because it weakens attribution for Route 53 charges.
+Also check for health checks and registered domains when permissions allow. If these commands are
+denied, report the access gap explicitly because it weakens attribution for Route 53 charges.
 
 #### 3k. CloudWatch Alarms
 
@@ -334,19 +322,8 @@ aws cloudwatch list-dashboards --profile <profile> --output json
 
 Check for any alarms in **ALARM** state — these indicate active problems.
 
-Count both **metric alarms** and **composite alarms**. Recent refactors may consolidate many
-per-function alarms into metric math alarms and composite alarms, which changes the CloudWatch cost
-shape even when overall monitoring is healthy.
-
-If CloudWatch spend is material, fetch Cost Explorer usage types and distinguish:
-
-- `CW:AlarmMonitorUsage`
-- `CW:CompositeAlarmMonitorUsage`
-- dashboards
-- logs ingestion/storage/queries
-- custom metrics
-
-This avoids misattributing alarm spend as logs spend.
+Count both **metric alarms** and **composite alarms**. If CloudWatch spend is material, fetch Cost
+Explorer usage types so you can separate alarm monitoring from logs, dashboards, and custom metrics.
 
 **Free tier:** 10 alarms always-free.
 
@@ -357,8 +334,8 @@ aws kms list-keys --profile <profile> --output json
 aws kms list-aliases --profile <profile> --output json
 ```
 
-If AWS KMS appears in Cost Explorer, inventory keys and aliases so you can tell whether spend is
-from active keys, request volume, or both. Prefer Cost Explorer usage types for precise attribution.
+If AWS KMS appears in Cost Explorer, inventory keys and aliases. Use Cost Explorer usage types for
+precise attribution.
 
 **Free tier:** None for customer-managed keys.
 
@@ -368,9 +345,7 @@ from active keys, request volume, or both. Prefer Cost Explorer usage types for 
 aws budgets describe-budgets --profile <profile> --account-id <account-id> --output json
 ```
 
-List budget names, time units, limits, and notification thresholds. This is not usually a large
-direct cost driver, but refactored stacks may rely on service-specific daily budgets for DynamoDB
-or Bedrock, and their presence materially changes the account's cost controls.
+List budget names, time units, limits, and notification thresholds.
 
 #### 3n. EC2 / ECS / EKS / RDS
 
@@ -423,9 +398,6 @@ Flag anything unusual:
 - **Spend without matching inventory:** A billed service has meaningful cost but the current
   resource inventory is empty or near-empty; usually means deleted earlier-in-window resources,
   global resources, cross-region resources, or missing permissions
-- **Alarm bloat:** Unexpectedly high metric/composite alarm counts after monitoring refactors
-- **Missing budget coverage:** Cost-heavy services such as DynamoDB or Bedrock have spend but no
-  service-specific budgets/notifications in accounts that are expected to have them
 
 ### 6. Print summary
 
