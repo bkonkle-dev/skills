@@ -218,9 +218,11 @@ aws cloudwatch get-metric-statistics --profile <profile> \
 #### 3e. API Gateway
 
 ```sh
-aws apigateway get-rest-apis --profile <profile> --output json 2>/dev/null
-aws apigatewayv2 get-apis --profile <profile> --output json 2>/dev/null
-aws apigatewayv2 get-domain-names --profile <profile> --output json 2>/dev/null
+aws apigateway get-rest-apis --profile <profile> --output json
+aws apigatewayv2 get-apis --profile <profile> --output json
+aws apigatewayv2 get-domain-names --profile <profile> --output json
+# For each custom domain:
+aws apigatewayv2 get-api-mappings --profile <profile> --domain-name <domain-name> --output json
 ```
 
 If APIs exist, check invocation counts via CloudWatch (`AWS/ApiGateway`, metric `Count`).
@@ -303,8 +305,8 @@ Flag if ingestion is **> 4 GB/month** (approaching 5 GB limit).
 
 ```sh
 aws route53 list-hosted-zones --profile <profile> --output json
-aws route53 list-health-checks --profile <profile> --output json 2>/dev/null
-aws route53domains list-domains --profile <profile> --region us-east-1 --output json 2>/dev/null
+aws route53 list-health-checks --profile <profile> --output json
+aws route53domains list-domains --profile <profile> --region us-east-1 --output json
 ```
 
 Each hosted zone costs $0.50/month. No free tier for hosted zones.
@@ -345,7 +347,7 @@ precise attribution.
 aws budgets describe-budgets --profile <profile> --account-id <account-id> --output json
 ```
 
-List budget names, time units, limits, and notification thresholds.
+List budget names, time units, and limits.
 
 #### 3n. EC2 / ECS / EKS / RDS
 
