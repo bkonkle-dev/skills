@@ -75,6 +75,7 @@ pull the repo and you're up to date. No reinstall needed.
 |-------|---------|-------------|
 | **AWS Cost Check** | `/aws-cost-check` | Audits your AWS account for runaway costs, forgotten resources, and free tier overages |
 | **Cleanup** | `/cleanup` | Prunes stale branches, checks for uncommitted work, reminds about session memories |
+| **Firecrawl API** | `/firecrawl-api` | Calls a hosted Firecrawl API via env vars and includes a sandbox-friendly YouTube transcript helper |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Recall** | `/recall` | Loads relevant prior context from layered session memory and archived transcripts before implementation |
