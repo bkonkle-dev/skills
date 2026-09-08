@@ -66,9 +66,10 @@ To install a single skill:
 ---
 
 Skills are symlinked into `~/.claude/skills/` and `~/.codex/skills/`, plus the skill-only roots used
-by Pi (`~/.pi/agent/skills/`) and OpenCode (`~/.config/opencode/skills/`), so changes to this repo are
-reflected immediately —
-pull the repo and you're up to date. No reinstall needed.
+by Pi (`~/.pi/agent/skills/`) and OpenCode (`~/.config/opencode/skills/`), so changes to this repo
+are reflected immediately — pull the repo and you're up to date. No reinstall needed. The
+PowerShell installers (`setup.ps1`, `install-skill.ps1`) currently target `~/.claude` and
+`~/.codex` only.
 
 ## Skills
 
@@ -81,7 +82,7 @@ pull the repo and you're up to date. No reinstall needed.
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Single-PR or sequential queue mode: reviews, fixes feedback, rebases, and auto-merges |
 | **Status** | `/status` | One-shot dashboard for open PRs/issues with stuck PR detection |
-| **Unslop** | `/skill:unslop` | Detects and rewrites generic, overly polished, or AI-sounding prose while preserving meaning |
+| **Unslop** | `/unslop` | Detects and rewrites generic, overly polished, or AI-sounding prose while preserving meaning |
 
 ### Lifecycle
 

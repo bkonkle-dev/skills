@@ -55,6 +55,30 @@ render_skill_index() {
 # Harnesses that only read a skills/ directory (no statusline or hooks support).
 SKILL_ONLY_ROOTS=("$HOME/.pi/agent" "$HOME/.config/opencode")
 
+install_skills() {
+  local target_root="$1"
+
+  for skill_dir in "$SCRIPT_DIR/skills"/*/; do
+    [ -f "$skill_dir/SKILL.md" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    install_link "$skill_dir" "$target_root/skills/$skill_name"
+    echo "✓ ${target_root##*/}/skills/$skill_name -> $skill_dir"
+  done
+
+  for installed_skill in "$target_root/skills"/*; do
+    [ -L "$installed_skill" ] || continue
+    target="$(readlink "$installed_skill")"
+    case "$target" in
+      "$SCRIPT_DIR/skills"/*)
+        [ -e "$target" ] || {
+          rm -f "$installed_skill"
+          echo "✓ ${target_root##*/}/skills/$(basename "$installed_skill") removed (stale symlink)"
+        }
+        ;;
+    esac
+  done
+}
+
 for target_root in "${TARGET_ROOTS[@]}"; do
   mkdir -p "$target_root/skills" "$target_root/hooks"
 
@@ -65,25 +89,7 @@ for target_root in "${TARGET_ROOTS[@]}"; do
     echo "✓ ${target_root##*/}/statusline -> $statusline_src"
   fi
 
-  for skill_dir in "$SCRIPT_DIR/skills"/*/; do
-    [ -f "$skill_dir/SKILL.md" ] || continue
-    skill_name="$(basename "$skill_dir")"
-    install_link "$skill_dir" "$target_root/skills/$skill_name"
-    echo "✓ ${target_root##*/}/skill/$skill_name -> $skill_dir"
-  done
-
-  for installed_skill in "$target_root/skills"/*; do
-    [ -L "$installed_skill" ] || continue
-    target="$(readlink "$installed_skill")"
-    case "$target" in
-      "$SCRIPT_DIR/skills"/*)
-        [ -e "$target" ] || {
-          rm -f "$installed_skill"
-          echo "✓ ${target_root##*/}/skill/$(basename "$installed_skill") removed (stale symlink)"
-        }
-        ;;
-    esac
-  done
+  install_skills "$target_root"
 
   render_skill_index "$target_root/skills/INDEX.md"
   echo "✓ ${target_root##*/}/skills index -> $target_root/skills/INDEX.md"
@@ -98,27 +104,7 @@ done
 
 for target_root in "${SKILL_ONLY_ROOTS[@]}"; do
   mkdir -p "$target_root/skills"
-
-  for skill_dir in "$SCRIPT_DIR/skills"/*/; do
-    [ -f "$skill_dir/SKILL.md" ] || continue
-    skill_name="$(basename "$skill_dir")"
-    install_link "$skill_dir" "$target_root/skills/$skill_name"
-    echo "✓ ${target_root##*/}/skill/$skill_name -> $skill_dir"
-  done
-
-  for installed_skill in "$target_root/skills"/*; do
-    [ -L "$installed_skill" ] || continue
-    target="$(readlink "$installed_skill")"
-    case "$target" in
-      "$SCRIPT_DIR/skills"/*)
-        [ -e "$target" ] || {
-          rm -f "$installed_skill"
-          echo "✓ ${target_root##*/}/skill/$(basename "$installed_skill") removed (stale symlink)"
-        }
-        ;;
-    esac
-  done
-
+  install_skills "$target_root"
 done
 
 echo ""

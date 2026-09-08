@@ -59,5 +59,5 @@ for target_root in "${TARGET_ROOTS[@]}"; do
     ln -s "$src" "$dst"
   fi
 
-  echo "✓ ${target_root##*/}/skill/$skill_name -> $src"
+  echo "✓ ${target_root##*/}/skills/$skill_name -> $src"
 done
