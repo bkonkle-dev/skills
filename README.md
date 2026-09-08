@@ -107,9 +107,9 @@ index at:
 - `~/.claude/skills/INDEX.md`
 - `~/.codex/skills/INDEX.md`
 
-When a skill is removed upstream, re-run `setup.sh` and delete its installed
-directory (for example `rm -r ~/.claude/skills/<name>`), or the stale symlink
-and INDEX entry remain.
+When a skill is removed upstream, re-run `setup.sh`: stale symlinks pointing into this repo are
+removed automatically and the INDEX files are regenerated. Real (non-symlink) copies must be
+removed manually, for example `rm -r ~/.claude/skills/<name>`.
 
 This keeps a stable, single-file inventory of installed skills so command discovery is consistent
 across sessions.
