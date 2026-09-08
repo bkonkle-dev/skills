@@ -2,10 +2,11 @@
 set -euo pipefail
 
 # ── Single skill installer ──────────────────────────────────────────────
-# Symlinks one skill from this repo into ~/.claude/skills/ and ~/.codex/skills/.
+# Symlinks one skill from this repo into ~/.claude/skills/, ~/.codex/skills/,
+# and the skill-only roots used by Pi and OpenCode.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TARGET_ROOTS=("$HOME/.claude" "$HOME/.codex")
+TARGET_ROOTS=("$HOME/.claude" "$HOME/.codex" "$HOME/.pi/agent" "$HOME/.config/opencode")
 SKILLS_DIR="$SCRIPT_DIR/skills"
 
 usage() {
