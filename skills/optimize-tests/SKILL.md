@@ -37,6 +37,10 @@ tests for dense business logic, and property-based tests for broad invariants.
 
 ## Workflow
 
+Optimize the suite only when the user asks for an audit or optimization. When the
+user only asks to add or change specific tests, apply these quality standards to
+that work alone; do not inventory, classify, or delete unrelated tests.
+
 1. Read the production code, tests, test configuration, and nearby callers.
    Identify the public interface and who uses it before judging a test.
 2. Establish the suite's existing conventions and run the relevant tests when
@@ -208,7 +212,8 @@ Before keeping or adding a test, answer:
    fewer mocks?
 6. Would a behavior-preserving refactor leave this test unchanged?
 
-If the first two answers are vague, delete the test. If the last answer is no,
+If the first two answers are vague, treat the test as a deletion candidate,
+subject to the safety rules below. If the last answer is no,
 rewrite it around the public behavior unless the implementation itself is the
 documented contract.
 
