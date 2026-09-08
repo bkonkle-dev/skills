@@ -78,6 +78,7 @@ PowerShell installers (`setup.ps1`, `install-skill.ps1`) currently target `~/.cl
 | **Architecture Diagrams** | `/architecture-diagrams` | Builds an interactive, auto-laid-out architecture docs page (React Flow + ELK); portable to TanStack Start, Next.js, or any React app |
 | **AWS Cost Check** | `/aws-cost-check` | Audits your AWS account for runaway costs, forgotten resources, and free tier overages |
 | **Cleanup** | `/cleanup` | Prunes stale branches, triages stashes, and checks for uncommitted or unpushed work after finishing a task |
+| **Optimize Tests** | `/skill:optimize-tests` | Audits, removes, consolidates, and rewrites tests for higher confidence per maintenance cost |
 | **Pick Up Issue** | `/pick-up-issue` | Finds an unassigned issue, claims it, implements a fix, opens a PR, and shepherds it to merge |
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Single-PR or sequential queue mode: reviews, fixes feedback, rebases, and auto-merges |
