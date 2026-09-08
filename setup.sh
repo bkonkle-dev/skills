@@ -3,7 +3,8 @@ set -euo pipefail
 
 # ── Skills repo installer ──────────────────────────────────────────────
 # Symlinks skills, statusline, and hooks from this repo into ~/.claude/
-# and ~/.codex/.
+# and ~/.codex/. Skills are also linked into the skill-only roots used by
+# Pi (~/.pi/agent/skills) and OpenCode (~/.config/opencode/skills).
 # Idempotent — safe to run repeatedly.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -51,6 +52,33 @@ render_skill_index() {
   } > "$out"
 }
 
+# Harnesses that only read a skills/ directory (no statusline or hooks support).
+SKILL_ONLY_ROOTS=("$HOME/.pi/agent" "$HOME/.config/opencode")
+
+install_skills() {
+  local target_root="$1"
+
+  for skill_dir in "$SCRIPT_DIR/skills"/*/; do
+    [ -f "$skill_dir/SKILL.md" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    install_link "$skill_dir" "$target_root/skills/$skill_name"
+    echo "✓ ${target_root##*/}/skills/$skill_name -> $skill_dir"
+  done
+
+  for installed_skill in "$target_root/skills"/*; do
+    [ -L "$installed_skill" ] || continue
+    target="$(readlink "$installed_skill")"
+    case "$target" in
+      "$SCRIPT_DIR/skills"/*)
+        [ -e "$target" ] || {
+          rm -f "$installed_skill"
+          echo "✓ ${target_root##*/}/skills/$(basename "$installed_skill") removed (stale symlink)"
+        }
+        ;;
+    esac
+  done
+}
+
 for target_root in "${TARGET_ROOTS[@]}"; do
   mkdir -p "$target_root/skills" "$target_root/hooks"
 
@@ -61,25 +89,7 @@ for target_root in "${TARGET_ROOTS[@]}"; do
     echo "✓ ${target_root##*/}/statusline -> $statusline_src"
   fi
 
-  for skill_dir in "$SCRIPT_DIR/skills"/*/; do
-    [ -f "$skill_dir/SKILL.md" ] || continue
-    skill_name="$(basename "$skill_dir")"
-    install_link "$skill_dir" "$target_root/skills/$skill_name"
-    echo "✓ ${target_root##*/}/skill/$skill_name -> $skill_dir"
-  done
-
-  for installed_skill in "$target_root/skills"/*; do
-    [ -L "$installed_skill" ] || continue
-    target="$(readlink "$installed_skill")"
-    case "$target" in
-      "$SCRIPT_DIR/skills"/*)
-        [ -e "$target" ] || {
-          rm -f "$installed_skill"
-          echo "✓ ${target_root##*/}/skill/$(basename "$installed_skill") removed (stale symlink)"
-        }
-        ;;
-    esac
-  done
+  install_skills "$target_root"
 
   render_skill_index "$target_root/skills/INDEX.md"
   echo "✓ ${target_root##*/}/skills index -> $target_root/skills/INDEX.md"
@@ -92,10 +102,15 @@ for target_root in "${TARGET_ROOTS[@]}"; do
   done
 done
 
+for target_root in "${SKILL_ONLY_ROOTS[@]}"; do
+  mkdir -p "$target_root/skills"
+  install_skills "$target_root"
+done
+
 echo ""
 echo "Done. Skills installed via symlinks from:"
 echo "  $SCRIPT_DIR"
 echo ""
-echo "Targets: ${TARGET_ROOTS[*]}"
+echo "Targets: ${TARGET_ROOTS[*]} + skill-only: ${SKILL_ONLY_ROOTS[*]}"
 echo "To update skills, pull this repo — symlinks auto-reflect changes."
 echo "To add a new skill, run setup.sh again after adding it."

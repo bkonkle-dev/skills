@@ -65,9 +65,11 @@ To install a single skill:
 
 ---
 
-Skills are symlinked into `~/.claude/skills/` and `~/.codex/skills/`, so changes to this repo are
-reflected immediately —
-pull the repo and you're up to date. No reinstall needed.
+Skills are symlinked into `~/.claude/skills/` and `~/.codex/skills/`, plus the skill-only roots used
+by Pi (`~/.pi/agent/skills/`) and OpenCode (`~/.config/opencode/skills/`), so changes to this repo
+are reflected immediately — pull the repo and you're up to date. No reinstall needed. The
+PowerShell installers (`setup.ps1`, `install-skill.ps1`) currently target `~/.claude` and
+`~/.codex` only.
 
 ## Skills
 
@@ -80,6 +82,7 @@ pull the repo and you're up to date. No reinstall needed.
 | **Preflight** | `/preflight` | Validates repo identity, branch state, CI health, and open PRs before you start work |
 | **Shepherd to Merge** | `/shepherd-to-merge` | Single-PR or sequential queue mode: reviews, fixes feedback, rebases, and auto-merges |
 | **Status** | `/status` | One-shot dashboard for open PRs/issues with stuck PR detection |
+| **Unslop** | `/unslop` | Detects and rewrites generic, overly polished, or AI-sounding prose while preserving meaning |
 
 ### Lifecycle
 
@@ -102,11 +105,11 @@ Run `./setup.sh` (or `./setup.ps1` on Windows) to refresh installed skills and g
 index at:
 
 - `~/.claude/skills/INDEX.md`
-
-When a skill is removed upstream, re-run `setup.sh` and delete its installed
-directory (for example `rm -r ~/.claude/skills/<name>`), or the stale symlink
-and INDEX entry remain.
 - `~/.codex/skills/INDEX.md`
+
+When a skill is removed upstream, re-run `setup.sh`: stale symlinks pointing into this repo are
+removed automatically and the INDEX files are regenerated. Real (non-symlink) copies must be
+removed manually, for example `rm -r ~/.claude/skills/<name>`.
 
 This keeps a stable, single-file inventory of installed skills so command discovery is consistent
 across sessions.
